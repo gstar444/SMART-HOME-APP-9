@@ -896,7 +896,7 @@ class _DashboardPageState extends State<DashboardPage> {
   /// "Add Bulb", "Add Fan" and "Add Device" shortcuts.
   Widget _addBar(Tr tr) {
     return Align(
-      alignment: Alignment.centerRight,
+      alignment: Alignment.center,
       child: FilledButton.icon(
         onPressed: () => _addDevice(),
         icon: const Icon(Icons.add),
@@ -1093,8 +1093,6 @@ class _DashboardPageState extends State<DashboardPage> {
                                       ],
                                       _roomBar(tr, accent, room),
                                       const SizedBox(height: 10),
-                                      _addBar(tr),
-                                      const SizedBox(height: 14),
                                       if (_showEnergy) ...[
                                         _energy(tr, st, room, accent),
                                         const SizedBox(height: 18),
@@ -1107,6 +1105,8 @@ class _DashboardPageState extends State<DashboardPage> {
                                         wide,
                                         usable,
                                       ),
+                                      const SizedBox(height: 18),
+                                      _addBar(tr),
                                     ],
                                   ],
                                 ),

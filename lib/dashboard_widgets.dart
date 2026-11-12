@@ -710,6 +710,27 @@ class _GlyphPainter extends CustomPainter {
           }
         }
         break;
+      case 'fan':
+        final blade = Paint()
+          ..color = color
+          ..style = PaintingStyle.fill;
+        final c = p(0.5, 0.5);
+        canvas.drawCircle(c, s * 0.075, blade);
+        for (var i = 0; i < 3; i++) {
+          canvas.save();
+          canvas.translate(c.dx, c.dy);
+          canvas.rotate(i * 2.0943951023931953);
+          canvas.drawOval(
+            Rect.fromCenter(
+              center: Offset(0, -s * 0.25),
+              width: s * 0.30,
+              height: s * 0.42,
+            ),
+            blade,
+          );
+          canvas.restore();
+        }
+        break;
       case 'floorplan':
         final thin = stroke(0.045);
         canvas.drawRect(

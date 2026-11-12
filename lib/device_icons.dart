@@ -43,7 +43,7 @@ GlyphBuilder glyphFor(String key, bool on) {
     case 'light':
       return _iconGlyph(on ? Icons.lightbulb : Icons.lightbulb_outline);
     case 'fan':
-      return _iconGlyph(Icons.toys);
+      return (color, size) => Glyph('fan', color: color, size: size);
     case 'heater':
       return _shapeGlyph('radiator');
     case 'curtain':
