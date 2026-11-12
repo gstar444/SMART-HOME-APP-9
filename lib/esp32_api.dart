@@ -92,11 +92,11 @@ class BoardHttp {
         req.contentLength = bytes.length;
         req.add(bytes);
       }
-      final res = await req.close().timeout(const Duration(seconds: 4));
+      final res = await req.close().timeout(const Duration(milliseconds: 1500));
       final text = await res
           .transform(utf8.decoder)
           .join()
-          .timeout(const Duration(seconds: 4));
+          .timeout(const Duration(milliseconds: 1500));
 
       Map<String, dynamic>? json;
       try {
