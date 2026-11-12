@@ -498,6 +498,14 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // --------------------------------------------------------------- tiles
+  /// रोशनी, पंखे और प्लग एक ही बॉक्स में रहें।
+  String _defaultGroup(Esp32Device d) {
+    if (d.icon == 'light' || d.icon == 'fan' || d.icon == 'plug') {
+      return 'Lighting';
+    }
+    return d.group;
+  }
+
   List<_Tile> _buildTiles(Tr tr, Esp32State st, int room) {
     final tiles = <_Tile>[];
 
@@ -519,7 +527,7 @@ class _DashboardPageState extends State<DashboardPage> {
       if (!d.available) caption = tr.capOffline;
       tiles.add(
         _Tile(
-          group: _sc.value.groupOf[d.id] ?? d.group,
+          group: _sc.value.groupOf[d.id] ?? _defaultGroup(d),
           glyph: glyphFor(d.icon, d.on && d.available),
           label: d.name,
           caption: caption,
