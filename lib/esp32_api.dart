@@ -621,10 +621,7 @@ class Esp32Controller extends ChangeNotifier
         .timeout(const Duration(milliseconds: 900), onTimeout: () => false);
     if (quick) return saved;
     // Slow path (board moved): race discovery methods.
-    final racers = <Future<String?>>[
-      _discoverByMdns(),
-      _scanSubnet(saved),
-    ];
+    final racers = <Future<String?>>[_discoverByMdns(), _scanSubnet(saved)];
     final found = await _firstNonNull(racers) ?? saved;
     if (found != saved) {
       final s = _settings.value;

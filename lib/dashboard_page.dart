@@ -1193,7 +1193,8 @@ class _Backdrop extends StatelessWidget {
           left: -80,
           child: _Orb(
             size: 300,
-            color: const Color(0xFFFFA05A).withValues(alpha: dark ? 0.14 : 0.10),
+            color: const Color(0xFFFFA05A)
+                .withValues(alpha: dark ? 0.14 : 0.10),
           ),
         ),
         child,
@@ -1216,9 +1217,7 @@ class _Orb extends StatelessWidget {
         height: size,
         decoration: BoxDecoration(
           shape: BoxShape.circle,
-          gradient: RadialGradient(
-            colors: [color, color.withValues(alpha: 0)],
-          ),
+          gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
         ),
       ),
     );
