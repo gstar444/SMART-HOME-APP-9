@@ -431,7 +431,7 @@ class DeviceTile extends StatelessWidget {
     final boxWidth = span == 1 ? boxHeight : totalWidth;
     final filled = active && !outline;
     final fg = active ? Colors.white : scheme.onSurface.withValues(alpha: 0.72);
-    final radius = BorderRadius.circular(22);
+    final radius = BorderRadius.circular(18);
 
     final Widget inside;
     if (busy) {
@@ -477,52 +477,45 @@ class DeviceTile extends StatelessWidget {
               height: boxHeight,
               decoration: BoxDecoration(
                 borderRadius: radius,
+                color: filled
+                    ? null
+                    : (active
+                          ? accent.withValues(alpha: 0.14)
+                          : (dark ? const Color(0xFF1A2338) : Colors.white)),
                 gradient: filled
                     ? LinearGradient(
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                         colors: [
-                          Color.lerp(accent, Colors.white, 0.18) ?? accent,
+                          Color.lerp(accent, Colors.white, 0.14) ?? accent,
                           accent,
                         ],
                       )
-                    : LinearGradient(
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                        colors: active
-                            ? [
-                                accent.withValues(alpha: 0.22),
-                                accent.withValues(alpha: 0.08),
-                              ]
-                            : dark
-                            ? [
-                                Colors.white.withValues(alpha: 0.13),
-                                Colors.white.withValues(alpha: 0.04),
-                              ]
-                            : const [Colors.white, Color(0xFFEEF3FA)],
-                      ),
+                    : null,
                 border: Border.all(
-                  color: active ? accent : _border(context),
-                  width: active ? 1.4 : 1,
+                  color: active
+                      ? accent.withValues(alpha: 0.85)
+                      : (dark
+                            ? const Color(0xFF263150)
+                            : const Color(0xFFD9E0EC)),
+                  width: active ? 1.2 : 1,
                 ),
                 boxShadow: [
-                  BoxShadow(
-                    color: active
-                        ? accent.withValues(alpha: 0.5)
-                        : Colors.black.withValues(alpha: dark ? 0.5 : 0.16),
-                    blurRadius: 0,
-                    offset: const Offset(0, 5),
-                  ),
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: dark ? 0.3 : 0.08),
-                    blurRadius: 14,
-                    offset: const Offset(0, 8),
-                  ),
                   if (active)
                     BoxShadow(
-                      color: accent.withValues(alpha: filled ? 0.45 : 0.35),
-                      blurRadius: 20,
+                      color: accent.withValues(alpha: 0.42),
+                      blurRadius: 16,
                     ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: dark ? 0.45 : 0.10),
+                    blurRadius: 0,
+                    offset: const Offset(0, 4),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: dark ? 0.25 : 0.06),
+                    blurRadius: 12,
+                    offset: const Offset(0, 6),
+                  ),
                 ],
               ),
               child: Material(
