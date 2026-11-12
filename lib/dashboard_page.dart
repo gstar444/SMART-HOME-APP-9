@@ -548,7 +548,7 @@ class _DashboardPageState extends State<DashboardPage> {
     );
     tiles.add(
       _Tile(
-        group: 'Security',
+        group: 'Climate',
         glyph: _iconGlyph(Icons.videocam),
         label: tr.securityCam,
         caption: st.camera.isEmpty ? '—' : tr.capView,

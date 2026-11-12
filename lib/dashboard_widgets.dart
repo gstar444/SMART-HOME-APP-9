@@ -605,66 +605,36 @@ class ClimateTile extends StatelessWidget {
     final muted = _muted(context);
     return Opacity(
       opacity: dim ? 0.45 : 1,
-      child: SizedBox(
+      child: Container(
         width: width,
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 14),
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(18),
+          color: dark ? const Color(0xFF1A2338) : const Color(0xFFF7F9FD),
+          border: Border.all(
+            color: dark ? const Color(0xFF263150) : const Color(0xFFD3DCEB),
+          ),
+        ),
+        child: Row(
           children: [
-            Container(
-              width: width,
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(18),
-                color: dark ? const Color(0xFF1A2338) : const Color(0xFFF7F9FD),
-                border: Border.all(
-                  color: dark
-                      ? const Color(0xFF263150)
-                      : const Color(0xFFD3DCEB),
-                ),
-                boxShadow: [
-                  BoxShadow(
-                    color: Colors.black.withValues(alpha: dark ? 0.45 : 0.10),
-                    offset: const Offset(0, 4),
-                  ),
-                ],
-              ),
-              child: Row(
+            Icon(Icons.device_thermostat, size: 28, color: accent),
+            const SizedBox(width: 12),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                mainAxisSize: MainAxisSize.min,
                 children: [
-                  Icon(Icons.device_thermostat, size: 30, color: accent),
-                  const SizedBox(width: 14),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          tempText,
-                          style: TextStyle(
-                            fontSize: 22,
-                            fontWeight: FontWeight.w600,
-                            color: scheme.onSurface,
-                          ),
-                        ),
-                        const SizedBox(height: 2),
-                        Text(
-                          humText,
-                          style: TextStyle(fontSize: 13, color: muted),
-                        ),
-                      ],
+                  Text(
+                    tempText,
+                    style: TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.w600,
+                      color: scheme.onSurface,
                     ),
                   ),
+                  const SizedBox(height: 2),
+                  Text(humText, style: TextStyle(fontSize: 12, color: muted)),
                 ],
-              ),
-            ),
-            const SizedBox(height: 7),
-            Text(
-              label,
-              maxLines: 2,
-              textAlign: TextAlign.center,
-              style: TextStyle(
-                fontSize: 12,
-                height: 1.15,
-                fontWeight: FontWeight.w600,
-                color: scheme.onSurface,
               ),
             ),
           ],
