@@ -17,7 +17,6 @@ import 'settings.dart';
 import 'settings_page.dart';
 import 'strings.dart';
 import 'strings_cloud.dart';
-import 'voice.dart';
 import 'web_page.dart';
 import 'wifi_page.dart';
 
@@ -73,7 +72,6 @@ class DashboardPage extends StatefulWidget {
 
 class _DashboardPageState extends State<DashboardPage> {
   int _room = 0;
-  bool _listening = false;
   bool _showEnergy = true;
 
   SettingsController get _sc => widget.settings;
@@ -379,44 +377,6 @@ class _DashboardPageState extends State<DashboardPage> {
         ),
       ),
     );
-  }
-
-  Future<void> _voice() async {
-    if (_listening) return;
-    final tr = Tr.of(_s);
-    final st = _esp.state;
-    setState(() => _listening = true);
-    String? heard;
-    try {
-      heard = await listenOnce(hindi: _s.hindi, prompt: tr.voicePrompt);
-    } on VoiceUnavailable {
-      _snack(tr.voiceUnavailable);
-    } finally {
-      if (mounted) setState(() => _listening = false);
-    }
-    if (!mounted || heard == null || heard.trim().isEmpty) return;
-    if (st == null || !_esp.online) {
-      _snack(tr.errNetwork);
-      return;
-    }
-    final action = parseVoice(heard, st.devices);
-    if (action == null) {
-      _snack('${tr.voiceHeard(heard)}\n${tr.voiceNoMatch}');
-      return;
-    }
-    String? error;
-    if (action.scene != null) {
-      error = await _esp.runScene(action.scene!);
-    } else {
-      for (final entry in action.set.entries) {
-        error = await _esp.setDevice(entry.key, entry.value) ?? error;
-      }
-      if (action.set.isEmpty && action.lockBlocked) {
-        _snack(tr.voiceNoUnlock);
-        return;
-      }
-    }
-    _snack(error ?? tr.voiceDone(heard));
   }
 
   // --------------------------------------------------------------- rooms
@@ -768,12 +728,6 @@ class _DashboardPageState extends State<DashboardPage> {
     final online = _esp.online;
     final ssid = (st == null || st.ssid.isEmpty) ? '—' : st.ssid;
     final signal = (st == null || !online) ? '—' : '${st.rssi} dBm';
-    final voice = VoiceButton(
-      label: tr.voiceAssistant,
-      accent: accent,
-      listening: _listening,
-      onTap: _voice,
-    );
     final toggle = ThemeToggle(
       dark: dark,
       onChanged: (_) => _sc.update(
@@ -817,8 +771,6 @@ class _DashboardPageState extends State<DashboardPage> {
         Row(
           children: [
             Expanded(child: clock),
-            const SizedBox(width: 10),
-            voice,
             const SizedBox(width: 10),
             toggle,
           ],
