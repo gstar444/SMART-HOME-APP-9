@@ -21,6 +21,9 @@ class Tr {
   String get pickPhotoFirst =>
       _t('ऊपर गैलरी से कोई फ़ोटो चुनें', 'Pick a photo from the gallery above');
   String get resetDefault => _t('डिफ़ॉल्ट पर लौटें', 'Reset to default');
+  String get statusLabel => _t('स्थिति', 'Status');
+  String get signalLabel => _t('सिग्नल', 'Signal');
+  String get wifiLabel => _t('Wi-Fi', 'Wi-Fi');
   String get refresh => _t('रीफ़्रेश', 'Refresh');
   String get switchDevice => _t('डिवाइस बदलें', 'Switch device');
   String get retry => _t('फिर कोशिश करें', 'Try again');

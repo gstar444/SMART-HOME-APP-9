@@ -660,15 +660,7 @@ class _DashboardPageState extends State<DashboardPage> {
     ];
     final boxes = <Widget>[];
     for (final g in groups) {
-      final items = <_Tile>[
-        ...tiles.where((t) => t.group == g),
-        _Tile(
-          group: g,
-          glyph: _iconGlyph(Icons.add),
-          label: tr.addControl,
-          onTap: () => _addDevice(),
-        ),
-      ];
+      final items = <_Tile>[...tiles.where((t) => t.group == g)];
       final cells = items.fold<int>(0, (sum, t) => sum + t.span);
       final boxWidth = wide
           ? math.min(usable, cells * tileWidth + (cells - 1) * 12 + 26)
@@ -780,23 +772,7 @@ class _DashboardPageState extends State<DashboardPage> {
   Widget _header(Tr tr, Esp32State? st, Color accent, bool dark, bool wide) {
     final online = _esp.online;
     final ssid = (st == null || st.ssid.isEmpty) ? '—' : st.ssid;
-    final wifiCard = StatusCard(
-      icon: Icons.memory,
-      title: (st != null && st.apActive && !st.wifiConnected)
-          ? tr.setupHotspotOn(st.apSsid)
-          : '${tr.connectedTo}$ssid',
-      subtitle: '${tr.status}${online ? tr.online : tr.offline}',
-      ok: online,
-      onTap: _openWifi,
-    );
-    final systemCard = StatusCard(
-      icon: Icons.memory,
-      title: tr.systemState,
-      subtitle: online
-          ? '${tr.status}${tr.online}${st == null ? '' : '  ·  ${st.rssi} dBm'}'
-          : '${tr.status}${tr.offline}',
-      ok: online,
-    );
+    final signal = (st == null || !online) ? '—' : '${st.rssi} dBm';
     final voice = VoiceButton(
       label: tr.voiceAssistant,
       accent: accent,
@@ -810,29 +786,40 @@ class _DashboardPageState extends State<DashboardPage> {
       ),
     );
     final clock = ClockCard(tr: tr, glow: accent);
-
-    if (wide) {
-      return Row(
-        crossAxisAlignment: CrossAxisAlignment.center,
-        children: [
-          SizedBox(width: 210, child: clock),
-          const SizedBox(width: 16),
-          voice,
-          const SizedBox(width: 16),
-          Expanded(
-            child: Column(
-              children: [wifiCard, const SizedBox(height: 10), systemCard],
-            ),
+    final infoRow = Row(
+      children: [
+        Expanded(
+          child: _InfoTile(
+            icon: Icons.circle,
+            iconColor: online
+                ? const Color(0xFF22C55E)
+                : const Color(0xFFEF4444),
+            label: tr.statusLabel,
+            value: online ? tr.online : tr.offline,
           ),
-          const SizedBox(width: 16),
-          toggle,
-        ],
-      );
-    }
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _InfoTile(
+            icon: Icons.signal_cellular_alt,
+            label: tr.signalLabel,
+            value: signal,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Expanded(
+          child: _InfoTile(
+            icon: Icons.wifi,
+            label: tr.wifiLabel,
+            value: ssid,
+            onTap: _openWifi,
+          ),
+        ),
+      ],
+    );
     return Column(
       children: [
         Row(
-          crossAxisAlignment: CrossAxisAlignment.center,
           children: [
             Expanded(child: clock),
             const SizedBox(width: 10),
@@ -842,9 +829,7 @@ class _DashboardPageState extends State<DashboardPage> {
           ],
         ),
         const SizedBox(height: 12),
-        wifiCard,
-        const SizedBox(height: 10),
-        systemCard,
+        infoRow,
       ],
     );
   }
@@ -910,26 +895,13 @@ class _DashboardPageState extends State<DashboardPage> {
 
   /// "Add Bulb", "Add Fan" and "Add Device" shortcuts.
   Widget _addBar(Tr tr) {
-    return Wrap(
-      spacing: 8,
-      runSpacing: 8,
-      children: [
-        FilledButton.tonalIcon(
-          onPressed: () => _addDevice(icon: 'light'),
-          icon: const Icon(Icons.lightbulb_outline),
-          label: Text(tr.addBulb),
-        ),
-        FilledButton.tonalIcon(
-          onPressed: () => _addDevice(icon: 'fan'),
-          icon: const Icon(Icons.toys),
-          label: Text(tr.addFan),
-        ),
-        FilledButton.tonalIcon(
-          onPressed: () => _addDevice(),
-          icon: const Icon(Icons.add),
-          label: Text(tr.addAnyDevice),
-        ),
-      ],
+    return Align(
+      alignment: Alignment.centerRight,
+      child: FilledButton.icon(
+        onPressed: () => _addDevice(),
+        icon: const Icon(Icons.add),
+        label: Text(tr.addAnyDevice),
+      ),
     );
   }
 
@@ -1219,6 +1191,48 @@ class _Orb extends StatelessWidget {
           shape: BoxShape.circle,
           gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
         ),
+      ),
+    );
+  }
+}
+
+class _InfoTile extends StatelessWidget {
+  const _InfoTile({
+    required this.icon,
+    required this.label,
+    required this.value,
+    this.iconColor,
+    this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final String value;
+  final Color? iconColor;
+  final VoidCallback? onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    final muted = Theme.of(context).colorScheme.onSurface
+        .withValues(alpha: 0.62);
+    return GlassCard(
+      onTap: onTap,
+      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 12),
+      child: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(icon, size: 16, color: iconColor ?? muted),
+          const SizedBox(height: 6),
+          Text(label, style: TextStyle(fontSize: 11, color: muted)),
+          const SizedBox(height: 3),
+          Text(
+            value,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 13, fontWeight: FontWeight.w600),
+          ),
+        ],
       ),
     );
   }
