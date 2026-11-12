@@ -754,6 +754,12 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         IconButton(
           visualDensity: VisualDensity.compact,
+          tooltip: tr.refresh,
+          icon: const Icon(Icons.refresh),
+          onPressed: _esp.refresh,
+        ),
+        IconButton(
+          visualDensity: VisualDensity.compact,
           tooltip: tr.wifiSettings,
           icon: Icon(_esp.online ? Icons.wifi : Icons.wifi_off),
           onPressed: _openWifi,
@@ -945,6 +951,7 @@ class _DashboardPageState extends State<DashboardPage> {
               style: Theme.of(context).textTheme.bodySmall,
             ),
           ),
+          TextButton(onPressed: _esp.refresh, child: Text(tr.retry)),
         ],
       ),
     );
@@ -978,6 +985,11 @@ class _DashboardPageState extends State<DashboardPage> {
             runSpacing: 8,
             alignment: WrapAlignment.center,
             children: [
+              FilledButton.icon(
+                onPressed: _esp.refresh,
+                icon: const Icon(Icons.refresh),
+                label: Text(tr.retry),
+              ),
               OutlinedButton.icon(
                 onPressed: _openWifi,
                 icon: const Icon(Icons.wifi),
