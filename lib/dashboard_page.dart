@@ -622,7 +622,7 @@ class _DashboardPageState extends State<DashboardPage> {
               for (final t in items)
                 if (t.climate)
                   ClimateTile(
-                    width: tileWidth * 2 + 12,
+                    width: tileWidth,
                     label: t.label,
                     tempText: t.caption ?? '—',
                     humText: t.humText ?? '—',
