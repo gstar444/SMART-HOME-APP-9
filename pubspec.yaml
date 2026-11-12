@@ -35,7 +35,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   webview_flutter: ^4.14.1
-  shared_preferences: ^2.5.3
+  shared_preferences: ^2.5.6
   # Phase 2 - cloud (MQTT over TLS), secrets and state management.
   # Versions follow what the package pages listed when this was written; `flutter pub get`
   # resolves the exact versions. They have NOT been resolved/built by the author (no SDK available).
@@ -43,6 +43,8 @@ dependencies:
   flutter_secure_storage: ^10.0.0
   provider: ^6.1.5
   multicast_dns: ^0.3.2
+  image_picker: ^1.2.4
+  path_provider: ^2.1.6
 
 dev_dependencies:
   flutter_test:
