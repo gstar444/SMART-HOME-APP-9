@@ -21,6 +21,8 @@ class Tr {
   String get pickPhotoFirst =>
       _t('ऊपर गैलरी से कोई फ़ोटो चुनें', 'Pick a photo from the gallery above');
   String get resetDefault => _t('डिफ़ॉल्ट पर लौटें', 'Reset to default');
+  String get climateTempTitle => _t('तापमान', 'Temperature');
+  String get climateSecurityTitle => _t('सुरक्षा', 'Security');
   String get connectionTitle => _t('कनेक्शन का तरीका', 'Connection mode');
   String get connectionAuto =>
       _t('स्वतः (पहले Wi-Fi, फिर MQTT)', 'Auto (Wi-Fi first, then MQTT)');

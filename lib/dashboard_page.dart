@@ -610,6 +610,64 @@ class _DashboardPageState extends State<DashboardPage> {
     final boxes = <Widget>[];
     for (final g in groups) {
       final items = <_Tile>[...tiles.where((t) => t.group == g)];
+      if (g == 'Climate') {
+        final climate = items.where((t) => t.climate).toList();
+        final camera = items.where((t) => !t.climate).toList();
+        final half = (usable - 14) / 2;
+        boxes.add(
+          SizedBox(
+            width: usable,
+            child: Row(
+              children: [
+                GroupBox(
+                  title: tr.climateTempTitle,
+                  width: half,
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    children: [
+                      for (final t in climate)
+                        ClimateTile(
+                          width: half - 26,
+                          label: t.label,
+                          tempText: t.caption ?? '—',
+                          humText: t.humText ?? '—',
+                          accent: accent,
+                          dim: dim,
+                        ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 14),
+                GroupBox(
+                  title: tr.climateSecurityTitle,
+                  width: half,
+                  child: Wrap(
+                    alignment: WrapAlignment.center,
+                    children: [
+                      for (final t in camera)
+                        DeviceTile(
+                          width: tileWidth,
+                          glyph: t.glyph,
+                          label: t.label,
+                          caption: t.caption,
+                          accent: accent,
+                          active: t.active,
+                          outline: t.outline,
+                          busy: t.busy,
+                          span: t.span,
+                          dim: dim,
+                          onTap: t.onTap,
+                          onLongPress: t.onLongPress,
+                        ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+        continue;
+      }
       final cells = items.fold<int>(0, (sum, t) => sum + t.span);
       final boxWidth = wide
           ? math.min(usable, cells * tileWidth + (cells - 1) * 12 + 26)
