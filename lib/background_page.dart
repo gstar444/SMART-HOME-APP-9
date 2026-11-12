@@ -196,7 +196,7 @@ class _BackgroundPageState extends State<BackgroundPage> {
             if (photo != null)
               Image.file(File(photo), fit: BoxFit.cover)
             else
-              _PresetBg(preset: _preset),
+              PresetBg(preset: _preset),
             Container(
               color: Colors.black.withValues(alpha: photo != null ? _dim : 0),
             ),
@@ -223,7 +223,7 @@ class _BackgroundPageState extends State<BackgroundPage> {
       selected: _photo == null && _preset == p,
       label: label,
       onTap: () => _pickPreset(p),
-      child: _PresetBg(preset: p),
+      child: PresetBg(preset: p),
     );
   }
 
@@ -287,7 +287,7 @@ class _BackgroundPageState extends State<BackgroundPage> {
   }
 }
 
-Color _glow(BgPreset p) => switch (p) {
+Color glowFor(BgPreset p) => switch (p) {
   BgPreset.aurora => const Color(0x8C7C5CF0),
   BgPreset.ocean => const Color(0x802DD4BF),
   BgPreset.ember => const Color(0x73F97316),
@@ -295,7 +295,7 @@ Color _glow(BgPreset p) => switch (p) {
   BgPreset.grid => const Color(0x00000000),
 };
 
-Alignment _center(BgPreset p) => switch (p) {
+Alignment centerFor(BgPreset p) => switch (p) {
   BgPreset.aurora => const Alignment(0.5, -0.6),
   BgPreset.ocean => const Alignment(-0.6, 0.6),
   BgPreset.ember => const Alignment(0.4, 0.9),
@@ -303,8 +303,8 @@ Alignment _center(BgPreset p) => switch (p) {
   BgPreset.grid => Alignment.center,
 };
 
-class _PresetBg extends StatelessWidget {
-  const _PresetBg({required this.preset});
+class PresetBg extends StatelessWidget {
+  const PresetBg({super.key, required this.preset});
   final BgPreset preset;
 
   @override
@@ -314,11 +314,11 @@ class _PresetBg extends StatelessWidget {
         fit: StackFit.expand,
         children: [
           const ColoredBox(color: _base),
-          CustomPaint(painter: _DotsPainter()),
+          CustomPaint(painter: DotsPainter()),
         ],
       );
     }
-    final glow = _glow(preset);
+    final glow = glowFor(preset);
     return Stack(
       fit: StackFit.expand,
       children: [
@@ -326,7 +326,7 @@ class _PresetBg extends StatelessWidget {
         DecoratedBox(
           decoration: BoxDecoration(
             gradient: RadialGradient(
-              center: _center(preset),
+              center: centerFor(preset),
               radius: 0.9,
               colors: [glow, glow.withValues(alpha: 0)],
             ),
@@ -337,7 +337,7 @@ class _PresetBg extends StatelessWidget {
   }
 }
 
-class _DotsPainter extends CustomPainter {
+class DotsPainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final paint = Paint()..color = const Color(0x598FA0BD);

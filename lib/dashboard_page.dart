@@ -1,9 +1,11 @@
+import 'dart:io';
 import 'dart:math' as math;
 
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import 'boards_page.dart';
+import 'background_page.dart';
 import 'cloud_settings_page.dart';
 import 'dashboard_widgets.dart';
 import 'device_editor.dart';
@@ -1124,7 +1126,7 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 }
 
-class _Backdrop extends StatelessWidget {
+class _Backdrop extends StatefulWidget {
   const _Backdrop({
     required this.dark,
     required this.accent,
@@ -1136,62 +1138,49 @@ class _Backdrop extends StatelessWidget {
   final Widget child;
 
   @override
-  Widget build(BuildContext context) {
-    return Stack(
-      children: [
-        Positioned.fill(
-          child: DecoratedBox(
-            decoration: BoxDecoration(
-              gradient: LinearGradient(
-                begin: Alignment.topCenter,
-                end: Alignment.bottomCenter,
-                colors: dark
-                    ? const [Color(0xFF0C1117), Color(0xFF141B24)]
-                    : const [Color(0xFFF5F8FC), Color(0xFFE8EEF7)],
-              ),
-            ),
-          ),
-        ),
-        Positioned(
-          top: -90,
-          right: -70,
-          child: _Orb(
-            size: 280,
-            color: accent.withValues(alpha: dark ? 0.22 : 0.16),
-          ),
-        ),
-        Positioned(
-          bottom: -100,
-          left: -80,
-          child: _Orb(
-            size: 300,
-            color: const Color(0xFFFFA05A)
-                .withValues(alpha: dark ? 0.14 : 0.10),
-          ),
-        ),
-        child,
-      ],
-    );
-  }
+  State<_Backdrop> createState() => _BackdropState();
 }
 
-class _Orb extends StatelessWidget {
-  const _Orb({required this.size, required this.color});
+class _BackdropState extends State<_Backdrop> {
+  HomeBackground? _bg;
 
-  final double size;
-  final Color color;
+  @override
+  void initState() {
+    super.initState();
+    _load();
+  }
+
+  Future<void> _load() async {
+    final bg = await HomeBackground.load();
+    if (!mounted) return;
+    setState(() => _bg = bg);
+  }
+
+  @override
+  void didUpdateWidget(covariant _Backdrop old) {
+    super.didUpdateWidget(old);
+    _load();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return IgnorePointer(
-      child: Container(
-        width: size,
-        height: size,
-        decoration: BoxDecoration(
-          shape: BoxShape.circle,
-          gradient: RadialGradient(colors: [color, color.withValues(alpha: 0)]),
+    final bg = _bg;
+    final photo = bg?.photoPath;
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: photo != null
+              ? Stack(
+                  fit: StackFit.expand,
+                  children: [
+                    Image.file(File(photo), fit: BoxFit.cover),
+                    ColoredBox(color: Colors.black.withValues(alpha: bg!.dim)),
+                  ],
+                )
+              : PresetBg(preset: bg?.preset ?? BgPreset.aurora),
         ),
-      ),
+        widget.child,
+      ],
     );
   }
 }
