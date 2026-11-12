@@ -21,6 +21,10 @@ class Tr {
   String get pickPhotoFirst =>
       _t('ऊपर गैलरी से कोई फ़ोटो चुनें', 'Pick a photo from the gallery above');
   String get resetDefault => _t('डिफ़ॉल्ट पर लौटें', 'Reset to default');
+  String get connectionTitle => _t('कनेक्शन का तरीका', 'Connection mode');
+  String get connectionAuto => _t('स्वतः (पहले Wi-Fi, फिर MQTT)', 'Auto (Wi-Fi first, then MQTT)');
+  String get connectionLocal => _t('सिर्फ़ Wi-Fi (घर पर)', 'Wi-Fi only (at home)');
+  String get connectionCloud => _t('सिर्फ़ MQTT (बाहर से)', 'MQTT only (away from home)');
   String get statusLabel => _t('स्थिति', 'Status');
   String get signalLabel => _t('सिग्नल', 'Signal');
   String get wifiLabel => _t('Wi-Fi', 'Wi-Fi');

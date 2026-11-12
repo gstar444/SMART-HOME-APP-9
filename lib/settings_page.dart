@@ -74,6 +74,12 @@ class SettingsPage extends StatelessWidget {
                 ),
               ),
               _Section(tr.sectionDevices),
+              ListTile(
+                leading: const Icon(Icons.swap_horiz),
+                title: Text(tr.connectionTitle),
+                subtitle: Text(_connectionLabel(tr, s.connectionMode)),
+                onTap: () => _pickConnection(context, tr, s),
+              ),
               for (var i = 0; i < s.devices.length; i++)
                 ListTile(
                   leading: Icon(
@@ -331,6 +337,45 @@ class SettingsPage extends StatelessWidget {
         );
       },
     );
+  }
+
+  String _connectionLabel(Tr tr, String mode) => switch (mode) {
+    'local' => tr.connectionLocal,
+    'cloud' => tr.connectionCloud,
+    _ => tr.connectionAuto,
+  };
+
+  Future<void> _pickConnection(
+    BuildContext context,
+    Tr tr,
+    AppSettings s,
+  ) async {
+    final picked = await showDialog<String>(
+      context: context,
+      builder: (ctx) => SimpleDialog(
+        title: Text(tr.connectionTitle),
+        children: [
+          for (final m in const ['auto', 'local', 'cloud'])
+            SimpleDialogOption(
+              onPressed: () => Navigator.pop(ctx, m),
+              child: Row(
+                children: [
+                  Icon(
+                    s.connectionMode == m
+                        ? Icons.radio_button_checked
+                        : Icons.radio_button_unchecked,
+                    size: 20,
+                  ),
+                  const SizedBox(width: 12),
+                  Expanded(child: Text(_connectionLabel(tr, m))),
+                ],
+              ),
+            ),
+        ],
+      ),
+    );
+    if (picked == null || picked == s.connectionMode) return;
+    await controller.update(s.copyWith(connectionMode: picked));
   }
 }
 
