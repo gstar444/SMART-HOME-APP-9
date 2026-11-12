@@ -579,6 +579,101 @@ class DeviceTile extends StatelessWidget {
   }
 }
 
+/// Temperature and humidity shown together on one card, no tap needed.
+class ClimateTile extends StatelessWidget {
+  const ClimateTile({
+    super.key,
+    required this.width,
+    required this.label,
+    required this.tempText,
+    required this.humText,
+    required this.accent,
+    this.dim = false,
+  });
+
+  final double width;
+  final String label;
+  final String tempText;
+  final String humText;
+  final Color accent;
+  final bool dim;
+
+  @override
+  Widget build(BuildContext context) {
+    final dark = _isDark(context);
+    final scheme = Theme.of(context).colorScheme;
+    final muted = _muted(context);
+    return Opacity(
+      opacity: dim ? 0.45 : 1,
+      child: SizedBox(
+        width: width,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Container(
+              width: width,
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+              decoration: BoxDecoration(
+                borderRadius: BorderRadius.circular(18),
+                color: dark ? const Color(0xFF1A2338) : const Color(0xFFF7F9FD),
+                border: Border.all(
+                  color: dark
+                      ? const Color(0xFF263150)
+                      : const Color(0xFFD3DCEB),
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: dark ? 0.45 : 0.10),
+                    offset: const Offset(0, 4),
+                  ),
+                ],
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.device_thermostat, size: 30, color: accent),
+                  const SizedBox(width: 14),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          tempText,
+                          style: TextStyle(
+                            fontSize: 22,
+                            fontWeight: FontWeight.w600,
+                            color: scheme.onSurface,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          humText,
+                          style: TextStyle(fontSize: 13, color: muted),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 7),
+            Text(
+              label,
+              maxLines: 2,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                height: 1.15,
+                fontWeight: FontWeight.w600,
+                color: scheme.onSurface,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 /// Outlined box that holds one group of tiles (Lighting, Climate, ...).
 class GroupBox extends StatelessWidget {
   const GroupBox({

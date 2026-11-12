@@ -37,6 +37,8 @@ class _Tile {
     this.span = 1,
     this.onTap,
     this.onLongPress,
+    this.climate = false,
+    this.humText,
   });
 
   final String group;
@@ -49,6 +51,8 @@ class _Tile {
   final int span;
   final VoidCallback? onTap;
   final VoidCallback? onLongPress;
+  final bool climate;
+  final String? humText;
 }
 
 GlyphBuilder _iconGlyph(IconData icon) =>
@@ -216,20 +220,6 @@ class _DashboardPageState extends State<DashboardPage> {
       MaterialPageRoute<void>(
         builder: (_) => SimpleWebScreen(title: tr.securityCam, url: st.camera),
       ),
-    );
-  }
-
-  void _showTemp(Esp32State st) {
-    final tr = Tr.of(_s);
-    final t = st.temp;
-    if (t == null) {
-      _snack('${tr.tempSensor}: —');
-      return;
-    }
-    final h = st.hum;
-    _snack(
-      '${tr.tempSensor}: ${t.toStringAsFixed(1)} °C'
-      '${h == null ? '' : '  ·  ${tr.humidityText(h.round())}'}',
     );
   }
 
@@ -585,22 +575,15 @@ class _DashboardPageState extends State<DashboardPage> {
 
     // House-level tiles are shown in every room.
     final temp = st.temp;
+    final hum = st.hum;
     tiles.add(
       _Tile(
         group: 'Climate',
-        glyph: (color, size) => Row(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Icon(Icons.device_thermostat, color: color, size: size),
-            Text(
-              temp == null ? '—' : '${temp.round()}°C',
-              style: TextStyle(fontSize: size * 0.3, color: color),
-            ),
-          ],
-        ),
+        glyph: _iconGlyph(Icons.device_thermostat),
         label: tr.tempSensor,
-        onTap: () => _showTemp(st),
+        caption: temp == null ? '—' : '${temp.round()}°C',
+        climate: true,
+        humText: hum == null ? '—' : tr.humidityText(hum.round()),
       ),
     );
     tiles.add(
@@ -677,20 +660,30 @@ class _DashboardPageState extends State<DashboardPage> {
             alignment: WrapAlignment.center,
             children: [
               for (final t in items)
-                DeviceTile(
-                  width: tileWidth,
-                  glyph: t.glyph,
-                  label: t.label,
-                  caption: t.caption,
-                  accent: accent,
-                  active: t.active,
-                  outline: t.outline,
-                  busy: t.busy,
-                  span: t.span,
-                  dim: dim && t.group != 'Scenes',
-                  onTap: t.onTap,
-                  onLongPress: t.onLongPress,
-                ),
+                if (t.climate)
+                  ClimateTile(
+                    width: tileWidth * 2 + 12,
+                    label: t.label,
+                    tempText: t.caption ?? '—',
+                    humText: t.humText ?? '—',
+                    accent: accent,
+                    dim: dim,
+                  )
+                else
+                  DeviceTile(
+                    width: tileWidth,
+                    glyph: t.glyph,
+                    label: t.label,
+                    caption: t.caption,
+                    accent: accent,
+                    active: t.active,
+                    outline: t.outline,
+                    busy: t.busy,
+                    span: t.span,
+                    dim: dim && t.group != 'Scenes',
+                    onTap: t.onTap,
+                    onLongPress: t.onLongPress,
+                  ),
             ],
           ),
         ),
