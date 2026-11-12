@@ -1074,16 +1074,9 @@ class _DashboardPageState extends State<DashboardPage> {
         return AnnotatedRegion<SystemUiOverlayStyle>(
           value: dark ? SystemUiOverlayStyle.light : SystemUiOverlayStyle.dark,
           child: Scaffold(
-            body: DecoratedBox(
-              decoration: BoxDecoration(
-                gradient: LinearGradient(
-                  begin: Alignment.topCenter,
-                  end: Alignment.bottomCenter,
-                  colors: dark
-                      ? const [Color(0xFF0C1117), Color(0xFF141B24)]
-                      : const [Color(0xFFF5F8FC), Color(0xFFE8EEF7)],
-                ),
-              ),
+            body: _Backdrop(
+              dark: dark,
+              accent: accent,
               child: SafeArea(
                 child: !_esp.loaded
                     ? _splash(tr)
@@ -1155,6 +1148,79 @@ class _DashboardPageState extends State<DashboardPage> {
           ),
         );
       },
+    );
+  }
+}
+
+class _Backdrop extends StatelessWidget {
+  const _Backdrop({
+    required this.dark,
+    required this.accent,
+    required this.child,
+  });
+
+  final bool dark;
+  final Color accent;
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    return Stack(
+      children: [
+        Positioned.fill(
+          child: DecoratedBox(
+            decoration: BoxDecoration(
+              gradient: LinearGradient(
+                begin: Alignment.topCenter,
+                end: Alignment.bottomCenter,
+                colors: dark
+                    ? const [Color(0xFF0C1117), Color(0xFF141B24)]
+                    : const [Color(0xFFF5F8FC), Color(0xFFE8EEF7)],
+              ),
+            ),
+          ),
+        ),
+        Positioned(
+          top: -90,
+          right: -70,
+          child: _Orb(
+            size: 280,
+            color: accent.withValues(alpha: dark ? 0.22 : 0.16),
+          ),
+        ),
+        Positioned(
+          bottom: -100,
+          left: -80,
+          child: _Orb(
+            size: 300,
+            color: const Color(0xFFFFA05A).withValues(alpha: dark ? 0.14 : 0.10),
+          ),
+        ),
+        child,
+      ],
+    );
+  }
+}
+
+class _Orb extends StatelessWidget {
+  const _Orb({required this.size, required this.color});
+
+  final double size;
+  final Color color;
+
+  @override
+  Widget build(BuildContext context) {
+    return IgnorePointer(
+      child: Container(
+        width: size,
+        height: size,
+        decoration: BoxDecoration(
+          shape: BoxShape.circle,
+          gradient: RadialGradient(
+            colors: [color, color.withValues(alpha: 0)],
+          ),
+        ),
+      ),
     );
   }
 }

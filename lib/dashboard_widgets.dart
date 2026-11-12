@@ -486,35 +486,44 @@ class DeviceTile extends StatelessWidget {
                           accent,
                         ],
                       )
-                    : null,
-                color: filled
-                    ? null
-                    : (active
-                          ? accent.withValues(alpha: 0.12)
-                          : (dark
-                                ? Colors.white.withValues(alpha: 0.07)
-                                : Colors.white)),
+                    : LinearGradient(
+                        begin: Alignment.topLeft,
+                        end: Alignment.bottomRight,
+                        colors: active
+                            ? [
+                                accent.withValues(alpha: 0.22),
+                                accent.withValues(alpha: 0.08),
+                              ]
+                            : dark
+                            ? [
+                                Colors.white.withValues(alpha: 0.13),
+                                Colors.white.withValues(alpha: 0.04),
+                              ]
+                            : const [Colors.white, Color(0xFFEEF3FA)],
+                      ),
                 border: Border.all(
                   color: active ? accent : _border(context),
                   width: active ? 1.4 : 1,
                 ),
-                boxShadow: active
-                    ? [
-                        BoxShadow(
-                          color: accent.withValues(alpha: filled ? 0.55 : 0.45),
-                          blurRadius: 20,
-                          offset: const Offset(0, 4),
-                        ),
-                      ]
-                    : (dark
-                          ? null
-                          : [
-                              BoxShadow(
-                                color: Colors.black.withValues(alpha: 0.05),
-                                blurRadius: 8,
-                                offset: const Offset(0, 3),
-                              ),
-                            ]),
+                boxShadow: [
+                  BoxShadow(
+                    color: active
+                        ? accent.withValues(alpha: 0.5)
+                        : Colors.black.withValues(alpha: dark ? 0.5 : 0.16),
+                    blurRadius: 0,
+                    offset: const Offset(0, 5),
+                  ),
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: dark ? 0.3 : 0.08),
+                    blurRadius: 14,
+                    offset: const Offset(0, 8),
+                  ),
+                  if (active)
+                    BoxShadow(
+                      color: accent.withValues(alpha: filled ? 0.45 : 0.35),
+                      blurRadius: 20,
+                    ),
+                ],
               ),
               child: Material(
                 type: MaterialType.transparency,
