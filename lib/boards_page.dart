@@ -260,6 +260,16 @@ class _BoardsPageState extends State<BoardsPage> {
       _snack(tr.badToken);
       return;
     }
+    // सेव से पहले ESP32 से जाँचें: गलत टोकन पर 401 आएगा और कुछ सेव नहीं होगा।
+    final http = BoardHttp(baseUrl: d.url, token: token);
+    try {
+      await http.call('GET', 'state');
+    } catch (_) {
+      _snack(tr.errAuth);
+      return;
+    } finally {
+      http.close();
+    }
     await store.setBoardToken(d.tokenKey, token);
     if (index == settings.value.activeDevice) await esp.reloadToken();
     _snack(tr.tokenSaved);
