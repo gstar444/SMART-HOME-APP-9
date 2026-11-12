@@ -387,7 +387,14 @@ class HomeController extends ChangeNotifier {
     final dev = _device(id);
     if (sp == null || dev == null) return _tr.notConnected;
     if (!dev.available) return _tr.boardOffline;
-    if (_viaLocal(sp.board)) return local.setDevice(id, on);
+    if (_viaLocal(sp.board)) {
+      _overlay[id] = _Overlay(on, _clock());
+      _onSource();
+      final err = await local.setDevice(id, on);
+      if (err != null) _overlay.remove(id);
+      _onSource();
+      return err;
+    }
     if (!dev.remoteAllowed && !(dev.type == 'lock' && on)) {
       return _tr.remoteNotAllowed;
     }

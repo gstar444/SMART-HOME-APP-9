@@ -616,9 +616,12 @@ class Esp32Controller extends ChangeNotifier
 
   Future<String> _resolveUrlUncached() async {
     final saved = _settings.value.activeUrl;
-    // Race the three ways at once; the first board that answers wins.
+    // Fast path: the saved address answers quickly on a normal network.
+    final quick = await _reachable(saved)
+        .timeout(const Duration(milliseconds: 900), onTimeout: () => false);
+    if (quick) return saved;
+    // Slow path (board moved): race discovery methods.
     final racers = <Future<String?>>[
-      _reachable(saved).then((ok) => ok ? saved : null),
       _discoverByMdns(),
       _scanSubnet(saved),
     ];
