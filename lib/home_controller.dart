@@ -355,8 +355,14 @@ class HomeController extends ChangeNotifier {
   }
 
   // ------------------------------------------------------------------- routing
-  bool _viaLocal(String boardId) =>
-      local.online && local.boardId == boardId && boardId.isNotEmpty;
+  bool _viaLocal(String boardId) {
+    if (boardId.isEmpty) return false;
+    final mode = settings.value.connectionMode;
+    if (mode == 'cloud') return false;
+    final localReady = local.online && local.boardId == boardId;
+    if (mode == 'local') return localReady;
+    return localReady; // 'auto': मौजूदा व्यवहार
+  }
 
   Future<String?> _remote(
     String board,

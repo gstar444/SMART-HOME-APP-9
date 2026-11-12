@@ -59,6 +59,11 @@ class Device {
   );
 }
 
+const Set<String> kConnectionModes = {'auto', 'local', 'cloud'};
+
+String _modeFrom(Object? v) =>
+    (v is String && kConnectionModes.contains(v)) ? v : 'auto';
+
 class AppSettings {
   const AppSettings({
     this.title = 'GSTAR HOME',
@@ -78,6 +83,7 @@ class AppSettings {
     this.roomOf = const <String, int>{},
     this.order = const <String, int>{},
     this.groupOf = const <String, String>{},
+    this.connectionMode = 'auto',
   });
 
   final String title;
@@ -103,6 +109,9 @@ class AppSettings {
   final Map<String, int> roomOf; // legacy, unused since 4.0
   final Map<String, int> order; // device id -> position in its room
   final Map<String, String> groupOf; // device id -> section chosen in the app
+
+  /// How the app reaches the ESP32: 'auto' (Wi-Fi first, then MQTT), 'local' (Wi-Fi only), 'cloud' (MQTT only).
+  final String connectionMode;
 
   Device get device {
     if (devices.isEmpty) {
@@ -131,6 +140,7 @@ class AppSettings {
     Map<String, int>? roomOf,
     Map<String, int>? order,
     Map<String, String>? groupOf,
+    String? connectionMode,
   }) {
     return AppSettings(
       title: title ?? this.title,
@@ -150,6 +160,7 @@ class AppSettings {
       roomOf: roomOf ?? this.roomOf,
       order: order ?? this.order,
       groupOf: groupOf ?? this.groupOf,
+      connectionMode: connectionMode ?? this.connectionMode,
     );
   }
 
@@ -171,6 +182,7 @@ class AppSettings {
     'roomOf': roomOf,
     'order': order,
     'groupOf': groupOf,
+    'connectionMode': connectionMode,
   };
 
   factory AppSettings.fromJson(Map<String, dynamic> json) {
@@ -237,6 +249,7 @@ class AppSettings {
       roomOf: roomOf,
       order: order,
       groupOf: groupOf,
+      connectionMode: _modeFrom(json['connectionMode']),
     );
   }
 }
