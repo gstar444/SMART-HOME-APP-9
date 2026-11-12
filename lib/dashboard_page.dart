@@ -787,7 +787,7 @@ class _DashboardPageState extends State<DashboardPage> {
         _s.copyWith(themeMode: dark ? ThemeMode.light : ThemeMode.dark),
       ),
     );
-    final clock = ClockCard(tr: tr, glow: accent);
+    final clock = ClockCard(tr: tr, glow: accent, ssid: ssid);
     final infoRow = Row(
       children: [
         Expanded(

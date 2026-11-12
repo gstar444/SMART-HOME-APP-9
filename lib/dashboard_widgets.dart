@@ -67,9 +67,10 @@ class GlassCard extends StatelessWidget {
 
 /// Big digital clock + date, ticking every second.
 class ClockCard extends StatefulWidget {
-  const ClockCard({super.key, required this.tr, this.glow});
+  const ClockCard({super.key, required this.tr, this.glow, this.ssid = ''});
 
   final Tr tr;
+  final String ssid;
   final Color? glow;
 
   @override
@@ -99,28 +100,41 @@ class _ClockCardState extends State<ClockCard> {
   Widget build(BuildContext context) {
     final tr = widget.tr;
     final onSurface = Theme.of(context).colorScheme.onSurface;
+    final muted = _muted(context);
     return GlassCard(
       glow: widget.glow,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      padding: const EdgeInsets.fromLTRB(16, 18, 16, 14),
       child: Column(
         mainAxisSize: MainAxisSize.min,
         children: [
           Text(
             '${_two(_now.hour)}:${_two(_now.minute)}',
             style: TextStyle(
-              fontSize: 40,
-              height: 1.1,
+              fontSize: 52,
+              height: 1,
               fontWeight: FontWeight.w300,
-              letterSpacing: 1,
+              letterSpacing: 2,
               color: onSurface,
             ),
           ),
-          const SizedBox(height: 6),
-          Divider(height: 1, color: _border(context)),
-          const SizedBox(height: 6),
+          const SizedBox(height: 8),
           Text(
             '${tr.weekday(_now.weekday)}, ${_now.day} ${tr.month(_now.month)}',
-            style: TextStyle(fontSize: 14, color: _muted(context)),
+            style: TextStyle(fontSize: 13, color: muted),
+          ),
+          const SizedBox(height: 12),
+          Divider(height: 1, color: _border(context)),
+          const SizedBox(height: 10),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              Icon(Icons.wifi, size: 15, color: muted),
+              const SizedBox(width: 6),
+              Text(
+                widget.ssid.isEmpty ? '—' : widget.ssid,
+                style: TextStyle(fontSize: 12, color: muted),
+              ),
+            ],
           ),
         ],
       ),
