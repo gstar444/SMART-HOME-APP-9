@@ -590,7 +590,7 @@ class Esp32Controller extends ChangeNotifier
       if (!_disposed) notifyListeners();
       // Re-read the real state shortly after, so the UI always converges.
       unawaited(
-        Future<void>.delayed(const Duration(milliseconds: 300), refresh),
+        Future<void>.delayed(const Duration(milliseconds: 100), refresh),
       );
     }
   }
