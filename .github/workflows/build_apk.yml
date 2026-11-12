@@ -3,7 +3,7 @@ name: Build and test
 on:
   workflow_dispatch:        # GitHub -> Actions -> "Build and test" -> "Run workflow"
   push:
-    branches: [main, master]
+    branches: [main, master, fix/automation-boot-hot]
   pull_request:
 
 jobs:
