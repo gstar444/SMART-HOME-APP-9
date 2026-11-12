@@ -5,6 +5,8 @@ import 'package:image_picker/image_picker.dart';
 import 'package:path_provider/path_provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'strings.dart';
+
 const String kBgPresetKey = 'home_bg_preset';
 const String kBgPhotoKey = 'home_bg_photo';
 const String kBgDimKey = 'home_bg_dim';
@@ -44,7 +46,9 @@ class HomeBackground {
 }
 
 class BackgroundPage extends StatefulWidget {
-  const BackgroundPage({super.key});
+  const BackgroundPage({super.key, required this.tr});
+
+  final Tr tr;
 
   @override
   State<BackgroundPage> createState() => _BackgroundPageState();
@@ -113,15 +117,16 @@ class _BackgroundPageState extends State<BackgroundPage> {
   Widget build(BuildContext context) {
     final muted = Theme.of(context).colorScheme.onSurface
         .withValues(alpha: 0.62);
+    final tr = widget.tr;
     final photoMode = _photo != null;
     return Scaffold(
-      appBar: AppBar(title: const Text('पृष्ठभूमि')),
+      appBar: AppBar(title: Text(tr.backgroundTitle)),
       body: ListView(
         padding: const EdgeInsets.all(16),
         children: [
           _preview(),
           const SizedBox(height: 20),
-          Text('तैयार पृष्ठभूमि', style: TextStyle(color: muted, fontSize: 12)),
+          Text(tr.presetsTitle, style: TextStyle(color: muted, fontSize: 12)),
           const SizedBox(height: 10),
           GridView.count(
             crossAxisCount: 3,
@@ -140,13 +145,10 @@ class _BackgroundPageState extends State<BackgroundPage> {
             ],
           ),
           const SizedBox(height: 22),
-          Text('अपनी फ़ोटो', style: TextStyle(color: muted, fontSize: 12)),
+          Text(tr.photoTitle, style: TextStyle(color: muted, fontSize: 12)),
           const SizedBox(height: 6),
           if (photoMode) ...[
-            Text(
-              'फ़ोटो का धुंधलापन',
-              style: TextStyle(color: muted, fontSize: 13),
-            ),
+            Text(tr.dimTitle, style: TextStyle(color: muted, fontSize: 13)),
             Slider(
               value: _dim,
               min: 0,
@@ -156,7 +158,7 @@ class _BackgroundPageState extends State<BackgroundPage> {
             ),
           ] else
             Text(
-              'ऊपर गैलरी से कोई फ़ोटो चुनें',
+              tr.pickPhotoFirst,
               style: TextStyle(color: muted, fontSize: 13),
             ),
           const SizedBox(height: 22),
@@ -165,14 +167,14 @@ class _BackgroundPageState extends State<BackgroundPage> {
               Expanded(
                 child: OutlinedButton(
                   onPressed: _reset,
-                  child: const Text('डिफ़ॉल्ट पर लौटें'),
+                  child: Text(tr.resetDefault),
                 ),
               ),
               const SizedBox(width: 10),
               Expanded(
                 child: FilledButton(
                   onPressed: _saving ? null : _save,
-                  child: const Text('सेव करें'),
+                  child: Text(tr.save),
                 ),
               ),
             ],
@@ -229,7 +231,7 @@ class _BackgroundPageState extends State<BackgroundPage> {
     final photo = _photo;
     return _tileFrame(
       selected: photo != null,
-      label: 'गैलरी से',
+      label: widget.tr.galleryTile,
       onTap: _pickPhoto,
       child: photo != null
           ? Image.file(File(photo), fit: BoxFit.cover)

@@ -64,12 +64,12 @@ class SettingsPage extends StatelessWidget {
                 ),
               ListTile(
                 leading: const Icon(Icons.wallpaper),
-                title: const Text('पृष्ठभूमि'),
-                subtitle: const Text('होम स्क्रीन की तैयार या अपनी फ़ोटो'),
+                title: Text(tr.backgroundTitle),
+                subtitle: Text(tr.backgroundHelp),
                 trailing: const Icon(Icons.chevron_right),
                 onTap: () => Navigator.of(context).push(
                   MaterialPageRoute<void>(
-                    builder: (_) => const BackgroundPage(),
+                    builder: (_) => BackgroundPage(tr: tr),
                   ),
                 ),
               ),

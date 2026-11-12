@@ -11,6 +11,16 @@ class Tr {
   String _t(String h, String e) => hi ? h : e;
 
   String get settings => _t('सेटिंग्स', 'Settings');
+  String get backgroundTitle => _t('पृष्ठभूमि', 'Background');
+  String get backgroundHelp =>
+      _t('होम स्क्रीन की तैयार या अपनी फ़ोटो', 'Ready-made or your own photo');
+  String get presetsTitle => _t('तैयार पृष्ठभूमि', 'Ready-made backgrounds');
+  String get photoTitle => _t('अपनी फ़ोटो', 'Your photo');
+  String get galleryTile => _t('गैलरी से', 'Gallery');
+  String get dimTitle => _t('फ़ोटो का धुंधलापन', 'Photo dimming');
+  String get pickPhotoFirst =>
+      _t('ऊपर गैलरी से कोई फ़ोटो चुनें', 'Pick a photo from the gallery above');
+  String get resetDefault => _t('डिफ़ॉल्ट पर लौटें', 'Reset to default');
   String get refresh => _t('रीफ़्रेश', 'Refresh');
   String get switchDevice => _t('डिवाइस बदलें', 'Switch device');
   String get retry => _t('फिर कोशिश करें', 'Try again');
