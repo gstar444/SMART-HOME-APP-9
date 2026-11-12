@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 
 import 'boards_page.dart';
+import 'background_page.dart';
 import 'cloud_settings_page.dart';
 import 'esp32_api.dart';
 import 'secure_storage.dart';
@@ -61,6 +62,17 @@ class SettingsPage extends StatelessWidget {
                     ),
                   ),
                 ),
+              ListTile(
+                leading: const Icon(Icons.wallpaper),
+                title: const Text('पृष्ठभूमि'),
+                subtitle: const Text('होम स्क्रीन की तैयार या अपनी फ़ोटो'),
+                trailing: const Icon(Icons.chevron_right),
+                onTap: () => Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => const BackgroundPage(),
+                  ),
+                ),
+              ),
               _Section(tr.sectionDevices),
               for (var i = 0; i < s.devices.length; i++)
                 ListTile(
