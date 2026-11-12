@@ -37,7 +37,9 @@ class GlassCard extends StatelessWidget {
     final dark = _isDark(context);
     return Container(
       decoration: BoxDecoration(
-        color: dark ? Colors.white.withValues(alpha: 0.06) : Colors.white,
+        color: dark
+            ? Colors.white.withValues(alpha: 0.06)
+            : const Color(0xFFF2F6FC).withValues(alpha: 0.9),
         borderRadius: BorderRadius.circular(radius),
         border: Border.all(color: _border(context)),
         boxShadow: [
@@ -465,7 +467,7 @@ class DeviceTile extends StatelessWidget {
     }
 
     return Opacity(
-      opacity: dim ? 0.45 : 1,
+      opacity: dim ? 0.62 : 1,
       child: SizedBox(
         width: totalWidth,
         child: Column(
@@ -481,7 +483,9 @@ class DeviceTile extends StatelessWidget {
                     ? null
                     : (active
                           ? accent.withValues(alpha: 0.14)
-                          : (dark ? const Color(0xFF1A2338) : Colors.white)),
+                          : (dark
+                                ? const Color(0xFF1A2338)
+                                : const Color(0xFFF7F9FD))),
                 gradient: filled
                     ? LinearGradient(
                         begin: Alignment.topLeft,
@@ -497,7 +501,7 @@ class DeviceTile extends StatelessWidget {
                       ? accent.withValues(alpha: 0.85)
                       : (dark
                             ? const Color(0xFF263150)
-                            : const Color(0xFFD9E0EC)),
+                            : const Color(0xFFD3DCEB)),
                   width: active ? 1.2 : 1,
                 ),
                 boxShadow: [
@@ -584,7 +588,7 @@ class GroupBox extends StatelessWidget {
         borderRadius: BorderRadius.circular(24),
         color: dark
             ? Colors.white.withValues(alpha: 0.035)
-            : Colors.white.withValues(alpha: 0.6),
+            : const Color(0xFFE9EFF8).withValues(alpha: 0.85),
         border: Border.all(color: _border(context)),
       ),
       child: Column(
