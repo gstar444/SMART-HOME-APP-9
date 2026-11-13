@@ -3,11 +3,13 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-const Color _accent = Color(0xFF7C5CF0);
-const Color _bg = Color(0xFF0B1019);
-const Color _field = Color(0xFF141C2C);
-const Color _line = Color(0xFF263150);
-const Color _muted = Color(0xFF8FA0BD);
+const Color _bg = Color(0xFF121212);
+const Color _fieldBg = Color(0xFF232129);
+const Color _accent = Color(0xFFD0BCFF);
+const Color _onAccent = Color(0xFF381E72);
+const Color _muted = Color(0xFFCAC4D0);
+const Color _text = Color(0xFFE6E1E5);
+const Color _danger = Color(0xFFF2B8B5);
 
 /// भाषा (true = हिंदी)। फ़ोन में सेव रहती है।
 final ValueNotifier<bool> loginHindi = ValueNotifier<bool>(true);
@@ -48,6 +50,7 @@ class _LoginPageState extends State<LoginPage> {
   int _signupStep = 0; // अकाउंट में: 0 = जानकारी, 1 = OTP
   String? _verificationId;
   bool _busy = false;
+  bool _obscure = true;
   String? _error;
   String? _info;
 
@@ -92,6 +95,11 @@ class _LoginPageState extends State<LoginPage> {
           return l.t('फ़ोन नंबर सही नहीं है', 'Invalid phone number');
         case 'invalid-verification-code':
           return l.t('OTP गलत है', 'Wrong OTP');
+        case 'credential-already-in-use':
+          return l.t(
+            'यह फ़ोन नंबर पहले से किसी अकाउंट से जुड़ा है',
+            'This phone is already linked to an account',
+          );
         case 'too-many-requests':
           return l.t(
             'बहुत कोशिशें हो गईं, थोड़ी देर बाद कोशिश करें',
@@ -107,25 +115,14 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Future<void> _loginEmail(_L l) async {
-    final email = _email.text.trim();
-    final pass = _password.text;
-    if (!email.contains('@') || pass.isEmpty) {
-      _set(
-        () => _error = l.t('ईमेल और पासवर्ड डालें', 'Enter email and password'),
-      );
-      return;
-    }
+  Future<void> _run(_L l, Future<void> Function() action) async {
     _set(() {
       _busy = true;
       _error = null;
       _info = null;
     });
     try {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: email,
-        password: pass,
-      );
+      await action();
     } catch (e) {
       _set(() => _error = _msg(e, l));
     } finally {
@@ -133,28 +130,43 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
+  bool _validPhone(String v) => RegExp(r'^\+\d{10,15}$').hasMatch(v);
+
+  Future<void> _loginEmail(_L l) async {
+    if (!_email.text.contains('@') || _password.text.isEmpty) {
+      _set(
+        () => _error = l.t('ईमेल और पासवर्ड डालें', 'Enter email and password'),
+      );
+      return;
+    }
+    await _run(l, () async {
+      await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: _email.text.trim(),
+        password: _password.text,
+      );
+    });
+  }
+
   Future<void> _forgot(_L l) async {
-    final email = _email.text.trim();
-    if (!email.contains('@')) {
+    if (!_email.text.contains('@')) {
       _set(() => _error = l.t('पहले ईमेल डालें', 'Enter your email first'));
       return;
     }
-    try {
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+    await _run(l, () async {
+      await FirebaseAuth.instance.sendPasswordResetEmail(
+        email: _email.text.trim(),
+      );
       _set(
         () => _info = l.t(
-          'रीसेट लिंक आपके ईमेल पर भेजा गया',
+          'रीसेट लिंक ईमेल पर भेजा गया',
           'Reset link sent to your email',
         ),
       );
-    } catch (e) {
-      _set(() => _error = _msg(e, l));
-    }
+    });
   }
 
   Future<void> _sendOtp(_L l, {required bool signup}) async {
-    final number = _phone.text.trim();
-    if (!RegExp(r'^\+\d{10,15}$').hasMatch(number)) {
+    if (!_validPhone(_phone.text.trim())) {
       _set(
         () => _error = l.t(
           'देश कोड के साथ नंबर लिखें, जैसे +919876543210',
@@ -170,12 +182,8 @@ class _LoginPageState extends State<LoginPage> {
     });
     try {
       await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: number,
-        verificationCompleted: (cred) async {
-          if (!signup) {
-            await FirebaseAuth.instance.signInWithCredential(cred);
-          }
-        },
+        phoneNumber: _phone.text.trim(),
+        verificationCompleted: (_) {},
         verificationFailed: (e) => _set(() {
           _busy = false;
           _error = _msg(e, l);
@@ -184,6 +192,7 @@ class _LoginPageState extends State<LoginPage> {
           _verificationId = id;
           _busy = false;
           if (signup) _signupStep = 1;
+          _info = l.t('OTP भेजा गया है', 'OTP sent');
         }),
         codeAutoRetrievalTimeout: (_) {},
       );
@@ -195,33 +204,23 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  Future<void> _verifyLoginOtp(_L l) async {
+  Future<void> _verifyPhoneLogin(_L l) async {
     final id = _verificationId;
     if (id == null) return;
-    _set(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      final cred = PhoneAuthProvider.credential(
-        verificationId: id,
-        smsCode: _otp.text.trim(),
+    await _run(l, () async {
+      await FirebaseAuth.instance.signInWithCredential(
+        PhoneAuthProvider.credential(
+          verificationId: id,
+          smsCode: _otp.text.trim(),
+        ),
       );
-      await FirebaseAuth.instance.signInWithCredential(cred);
-    } catch (e) {
-      _set(() => _error = _msg(e, l));
-    } finally {
-      _set(() => _busy = false);
-    }
+    });
   }
 
-  Future<void> _createAccount(_L l) async {
-    final id = _verificationId;
-    final name = _name.text.trim();
-    final email = _email.text.trim();
-    final pass = _password.text;
-    if (id == null) return;
-    if (name.isEmpty || !email.contains('@') || pass.length < 6) {
+  Future<void> _startSignup(_L l) async {
+    if (_name.text.trim().isEmpty ||
+        !_email.text.contains('@') ||
+        _password.text.length < 6) {
       _set(
         () => _error = l.t(
           'नाम, ईमेल और 6+ अक्षर का पासवर्ड डालें',
@@ -230,68 +229,47 @@ class _LoginPageState extends State<LoginPage> {
       );
       return;
     }
-    _set(() {
-      _busy = true;
-      _error = null;
-    });
-    try {
-      final result = await FirebaseAuth.instance.createUserWithEmailAndPassword(
-        email: email,
-        password: pass,
-      );
-      final user = result.user;
-      if (user != null) {
-        await user.updateDisplayName(name);
-        await user.linkWithCredential(
-          PhoneAuthProvider.credential(
-            verificationId: id,
-            smsCode: _otp.text.trim(),
-          ),
-        );
-      }
-    } catch (e) {
-      _set(() => _error = _msg(e, l));
-    } finally {
-      _set(() => _busy = false);
-    }
+    await _sendOtp(l, signup: true);
   }
 
-  Future<void> _google(_L l) async {
-    _set(() {
-      _busy = true;
-      _error = null;
+  Future<void> _finishSignup(_L l) async {
+    final id = _verificationId;
+    if (id == null) return;
+    await _run(l, () async {
+      final auth = FirebaseAuth.instance;
+      final phoneLogin = await auth.signInWithCredential(
+        PhoneAuthProvider.credential(
+          verificationId: id,
+          smsCode: _otp.text.trim(),
+        ),
+      );
+      final user = phoneLogin.user;
+      if (user == null) return;
+      await user.linkWithCredential(
+        EmailAuthProvider.credential(
+          email: _email.text.trim(),
+          password: _password.text,
+        ),
+      );
+      await user.updateDisplayName(_name.text.trim());
     });
-    try {
-      final gs = GoogleSignIn.instance;
-      await gs.initialize();
-      final account = await gs.authenticate();
-      final idToken = account.authentication.idToken;
-      await FirebaseAuth.instance.signInWithCredential(
-        GoogleAuthProvider.credential(idToken: idToken),
-      );
-    } catch (e) {
-      _set(
-        () => _error = l.t('Google लॉगिन नहीं हुआ', 'Google sign-in failed'),
-      );
-    } finally {
-      _set(() => _busy = false);
-    }
   }
 
-  void _switchTab(int i) => _set(() {
-    _tab = i;
-    _error = null;
-    _info = null;
-    _signupStep = 0;
-    _verificationId = null;
+  Future<void> _google(_L l) => _run(l, () async {
+    final gs = GoogleSignIn.instance;
+    await gs.initialize();
+    final account = await gs.authenticate();
+    await FirebaseAuth.instance.signInWithCredential(
+      GoogleAuthProvider.credential(idToken: account.authentication.idToken),
+    );
   });
 
-  Widget _seg(List<String> labels, int selected, void Function(int) onPick) {
+  Widget _tabs(List<String> labels, int selected, void Function(int) onPick) {
     return Container(
       padding: const EdgeInsets.all(4),
       decoration: BoxDecoration(
-        color: _field,
-        borderRadius: BorderRadius.circular(14),
+        color: _fieldBg,
+        borderRadius: BorderRadius.circular(24),
       ),
       child: Row(
         children: [
@@ -300,12 +278,12 @@ class _LoginPageState extends State<LoginPage> {
               child: GestureDetector(
                 onTap: () => onPick(i),
                 child: AnimatedContainer(
-                  duration: const Duration(milliseconds: 180),
-                  padding: const EdgeInsets.symmetric(vertical: 9),
+                  duration: const Duration(milliseconds: 200),
+                  padding: const EdgeInsets.symmetric(vertical: 10),
                   alignment: Alignment.center,
                   decoration: BoxDecoration(
                     color: i == selected ? _accent : Colors.transparent,
-                    borderRadius: BorderRadius.circular(11),
+                    borderRadius: BorderRadius.circular(20),
                   ),
                   child: Text(
                     labels[i],
@@ -314,7 +292,7 @@ class _LoginPageState extends State<LoginPage> {
                       fontWeight: i == selected
                           ? FontWeight.w600
                           : FontWeight.w400,
-                      color: i == selected ? Colors.white : _muted,
+                      color: i == selected ? _onAccent : _muted,
                     ),
                   ),
                 ),
@@ -325,159 +303,192 @@ class _LoginPageState extends State<LoginPage> {
     );
   }
 
-  Widget _input({
+  Widget _field({
     required String label,
-    required TextEditingController c,
-    bool obscure = false,
+    required TextEditingController controller,
+    required IconData icon,
     TextInputType? type,
+    bool password = false,
     String? hint,
   }) {
-    OutlineInputBorder border(Color color) => OutlineInputBorder(
-      borderRadius: BorderRadius.circular(13),
-      borderSide: BorderSide(color: color),
+    OutlineInputBorder border(Color c, double w) => OutlineInputBorder(
+      borderRadius: BorderRadius.circular(16),
+      borderSide: BorderSide(color: c, width: w),
     );
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Text(label, style: const TextStyle(fontSize: 12, color: _muted)),
-        const SizedBox(height: 6),
-        TextField(
-          controller: c,
-          obscureText: obscure,
-          keyboardType: type,
-          enabled: !_busy,
-          decoration: InputDecoration(
-            hintText: hint,
-            filled: true,
-            fillColor: _field,
-            isDense: true,
-            contentPadding: const EdgeInsets.symmetric(
-              horizontal: 14,
-              vertical: 14,
-            ),
-            border: border(_line),
-            enabledBorder: border(_line),
-            focusedBorder: border(_accent),
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 14),
+      child: TextField(
+        controller: controller,
+        enabled: !_busy,
+        keyboardType: type,
+        obscureText: password && _obscure,
+        style: const TextStyle(color: _text, fontSize: 15),
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          labelStyle: const TextStyle(color: _muted),
+          floatingLabelStyle: const TextStyle(color: _accent),
+          hintStyle: const TextStyle(color: Color(0xFF6F6A78)),
+          prefixIcon: Icon(icon, color: _muted),
+          suffixIcon: password
+              ? IconButton(
+                  icon: Icon(
+                    _obscure
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                    color: _muted,
+                  ),
+                  onPressed: () => _set(() => _obscure = !_obscure),
+                )
+              : null,
+          filled: true,
+          fillColor: _fieldBg,
+          contentPadding: const EdgeInsets.symmetric(
+            horizontal: 16,
+            vertical: 16,
           ),
+          border: border(Colors.transparent, 0),
+          enabledBorder: border(Colors.transparent, 0),
+          focusedBorder: border(_accent, 1.6),
         ),
-        const SizedBox(height: 12),
-      ],
-    );
-  }
-
-  Widget _primary(String text, VoidCallback onTap) {
-    return SizedBox(
-      width: double.infinity,
-      child: FilledButton(
-        onPressed: _busy ? null : onTap,
-        style: FilledButton.styleFrom(
-          backgroundColor: _accent,
-          padding: const EdgeInsets.symmetric(vertical: 14),
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(14),
-          ),
-        ),
-        child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)),
       ),
     );
   }
 
-  List<Widget> _loginBody(_L l) {
+  Widget _primary(String text, VoidCallback onTap) => SizedBox(
+    width: double.infinity,
+    child: FilledButton(
+      onPressed: _busy ? null : onTap,
+      style: FilledButton.styleFrom(
+        backgroundColor: _accent,
+        foregroundColor: _onAccent,
+        padding: const EdgeInsets.symmetric(vertical: 15),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+      ),
+      child: Text(
+        text,
+        style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w600),
+      ),
+    ),
+  );
+
+  List<Widget> _loginFields(_L l) {
     if (_method == 0) {
       return [
-        _input(
+        _field(
           label: l.t('ईमेल', 'Email'),
-          c: _email,
+          controller: _email,
+          icon: Icons.mail_outline,
           type: TextInputType.emailAddress,
           hint: 'you@gmail.com',
         ),
-        _input(label: l.t('पासवर्ड', 'Password'), c: _password, obscure: true),
+        _field(
+          label: l.t('पासवर्ड', 'Password'),
+          controller: _password,
+          icon: Icons.lock_outline,
+          password: true,
+        ),
         Align(
           alignment: Alignment.centerRight,
           child: TextButton(
             onPressed: _busy ? null : () => _forgot(l),
             child: Text(
               l.t('पासवर्ड भूल गए?', 'Forgot password?'),
-              style: const TextStyle(color: Color(0xFFA893FF), fontSize: 12),
+              style: const TextStyle(color: _accent, fontSize: 13),
             ),
           ),
         ),
-        const SizedBox(height: 4),
-        _primary(l.t('लॉगिन करें', 'Login'), () => _loginEmail(l)),
+        const SizedBox(height: 6),
+        _primary(l.t('लॉगिन करें', 'Sign in'), () => _loginEmail(l)),
       ];
     }
     return [
-      _input(
+      _field(
         label: l.t('फ़ोन नंबर', 'Phone number'),
-        c: _phone,
+        controller: _phone,
+        icon: Icons.phone_outlined,
         type: TextInputType.phone,
         hint: '+919876543210',
       ),
-      if (_verificationId != null) ...[
-        _input(
-          label: l.t('OTP डालें', 'Enter OTP'),
-          c: _otp,
+      if (_verificationId != null)
+        _field(
+          label: 'OTP',
+          controller: _otp,
+          icon: Icons.sms_outlined,
           type: TextInputType.number,
         ),
+      const SizedBox(height: 6),
+      if (_verificationId == null)
+        _primary(l.t('OTP भेजें', 'Send OTP'), () => _sendOtp(l, signup: false))
+      else
         _primary(
-          l.t('सत्यापित करके लॉगिन', 'Verify and login'),
-          () => _verifyLoginOtp(l),
+          l.t('OTP से लॉगिन करें', 'Sign in with OTP'),
+          () => _verifyPhoneLogin(l),
         ),
-      ] else
-        _primary(
-          l.t('OTP भेजें', 'Send OTP'),
-          () => _sendOtp(l, signup: false),
-        ),
-      const SizedBox(height: 10),
-      Text(
-        l.t('फ़ोन से लॉगिन OTP से होगा', 'Phone login uses OTP'),
-        textAlign: TextAlign.center,
-        style: const TextStyle(fontSize: 11, color: _muted),
-      ),
     ];
   }
 
-  List<Widget> _signupBody(_L l) {
+  List<Widget> _signupFields(_L l) {
     if (_signupStep == 0) {
       return [
-        _input(label: l.t('पूरा नाम', 'Full name'), c: _name),
-        _input(
+        _field(
+          label: l.t('पूरा नाम', 'Full name'),
+          controller: _name,
+          icon: Icons.person_outline,
+        ),
+        _field(
           label: l.t('ईमेल', 'Email'),
-          c: _email,
+          controller: _email,
+          icon: Icons.mail_outline,
           type: TextInputType.emailAddress,
           hint: 'you@gmail.com',
         ),
-        _input(
-          label: l.t('फ़ोन नंबर (+91...)', 'Phone (+91...)'),
-          c: _phone,
+        _field(
+          label: l.t('फ़ोन नंबर', 'Phone number'),
+          controller: _phone,
+          icon: Icons.phone_outlined,
           type: TextInputType.phone,
           hint: '+919876543210',
         ),
-        _input(
+        _field(
           label: l.t('पासवर्ड बनाएँ', 'Create password'),
-          c: _password,
-          obscure: true,
+          controller: _password,
+          icon: Icons.lock_outline,
+          password: true,
         ),
-        const SizedBox(height: 4),
-        _primary(l.t('OTP भेजें', 'Send OTP'), () => _sendOtp(l, signup: true)),
+        const SizedBox(height: 6),
+        _primary(l.t('OTP भेजें', 'Send OTP'), () => _startSignup(l)),
       ];
     }
     return [
       Text(
-        l.t('फ़ोन पर आया OTP डालें', 'Enter the OTP sent to your phone'),
-        style: const TextStyle(fontSize: 13, color: _muted),
+        l.t(
+          'फ़ोन पर आया 6 अंकों का OTP डालें',
+          'Enter the 6-digit OTP sent to your phone',
+        ),
+        style: const TextStyle(color: _muted, fontSize: 13),
       ),
-      const SizedBox(height: 10),
-      _input(label: 'OTP', c: _otp, type: TextInputType.number),
+      const SizedBox(height: 12),
+      _field(
+        label: 'OTP',
+        controller: _otp,
+        icon: Icons.sms_outlined,
+        type: TextInputType.number,
+      ),
       _primary(
         l.t('सत्यापित करें और बनाएँ', 'Verify and create account'),
-        () => _createAccount(l),
+        () => _finishSignup(l),
       ),
       TextButton(
-        onPressed: _busy ? null : () => _sendOtp(l, signup: true),
+        onPressed: _busy
+            ? null
+            : () => _set(() {
+                _signupStep = 0;
+                _otp.clear();
+              }),
         child: Text(
-          l.t('OTP फिर भेजें', 'Resend OTP'),
-          style: const TextStyle(color: Color(0xFFA893FF)),
+          l.t('जानकारी बदलें', 'Edit details'),
+          style: const TextStyle(color: _accent),
         ),
       ),
     ];
@@ -491,37 +502,31 @@ class _LoginPageState extends State<LoginPage> {
         final l = _L(hindi);
         return Scaffold(
           backgroundColor: _bg,
+          appBar: AppBar(
+            backgroundColor: _bg,
+            elevation: 0,
+            actions: [
+              TextButton(
+                onPressed: () => setLoginLanguage(!hindi),
+                child: Text(
+                  hindi ? 'English' : 'हिंदी',
+                  style: const TextStyle(color: _muted),
+                ),
+              ),
+            ],
+          ),
           body: SafeArea(
             child: ListView(
-              padding: const EdgeInsets.fromLTRB(22, 10, 22, 24),
+              padding: const EdgeInsets.fromLTRB(24, 0, 24, 28),
               children: [
-                Align(
-                  alignment: Alignment.centerRight,
-                  child: SizedBox(
-                    width: 180,
-                    child: _seg(
-                      ['हिंदी', 'English'],
-                      hindi ? 0 : 1,
-                      (i) => setLoginLanguage(i == 0),
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 22),
                 Center(
-                  child: Container(
-                    width: 62,
-                    height: 62,
-                    alignment: Alignment.center,
-                    decoration: BoxDecoration(
-                      color: _accent.withValues(alpha: 0.18),
-                      borderRadius: BorderRadius.circular(18),
-                    ),
-                    child: const Text(
-                      'G',
-                      style: TextStyle(
-                        fontSize: 26,
-                        fontWeight: FontWeight.w600,
-                      ),
+                  child: ClipRRect(
+                    borderRadius: BorderRadius.circular(22),
+                    child: Image.asset(
+                      'assets/images/app_logo.png',
+                      width: 84,
+                      height: 84,
+                      cacheWidth: 252,
                     ),
                   ),
                 ),
@@ -530,9 +535,9 @@ class _LoginPageState extends State<LoginPage> {
                   child: Text(
                     'GSTAR HOME',
                     style: TextStyle(
-                      fontSize: 20,
-                      fontWeight: FontWeight.w600,
-                      letterSpacing: 0.5,
+                      color: _text,
+                      fontSize: 22,
+                      fontWeight: FontWeight.w500,
                     ),
                   ),
                 ),
@@ -543,41 +548,44 @@ class _LoginPageState extends State<LoginPage> {
                       'अपने घर को कहीं से भी नियंत्रित करें',
                       'Control your home from anywhere',
                     ),
-                    style: const TextStyle(fontSize: 12, color: _muted),
+                    style: const TextStyle(color: _muted, fontSize: 13),
                   ),
                 ),
-                const SizedBox(height: 22),
-                SizedBox(
-                  width: double.infinity,
-                  child: _seg(
-                    [
-                      l.t('लॉगिन', 'Login'),
-                      l.t('अकाउंट बनाएँ', 'Create account'),
-                    ],
-                    _tab,
-                    _switchTab,
-                  ),
+                const SizedBox(height: 26),
+                _tabs(
+                  [
+                    l.t('लॉगिन', 'Sign in'),
+                    l.t('अकाउंट बनाएँ', 'Create account'),
+                  ],
+                  _tab,
+                  (i) => _set(() {
+                    _tab = i;
+                    _error = null;
+                    _info = null;
+                    _signupStep = 0;
+                    _verificationId = null;
+                  }),
                 ),
-                const SizedBox(height: 16),
+                const SizedBox(height: 18),
                 if (_tab == 0) ...[
-                  SizedBox(
-                    width: double.infinity,
-                    child: _seg(
-                      [l.t('ईमेल', 'Email'), l.t('फ़ोन', 'Phone')],
-                      _method,
-                      (i) => _set(() {
-                        _method = i;
-                        _error = null;
-                        _verificationId = null;
-                      }),
-                    ),
+                  _tabs(
+                    [l.t('ईमेल', 'Email'), l.t('फ़ोन', 'Phone')],
+                    _method,
+                    (i) => _set(() {
+                      _method = i;
+                      _error = null;
+                      _verificationId = null;
+                    }),
                   ),
-                  const SizedBox(height: 16),
-                ],
-                ...(_tab == 0 ? _loginBody(l) : _signupBody(l)),
+                  const SizedBox(height: 18),
+                  ..._loginFields(l),
+                ] else
+                  ..._signupFields(l),
                 if (_busy) ...[
                   const SizedBox(height: 14),
-                  const Center(child: CircularProgressIndicator()),
+                  const Center(
+                    child: CircularProgressIndicator(color: _accent),
+                  ),
                 ],
                 if (_info != null) ...[
                   const SizedBox(height: 12),
@@ -585,8 +593,8 @@ class _LoginPageState extends State<LoginPage> {
                     _info!,
                     textAlign: TextAlign.center,
                     style: const TextStyle(
-                      color: Color(0xFF34C77B),
-                      fontSize: 12,
+                      color: Color(0xFF9FD8A6),
+                      fontSize: 13,
                     ),
                   ),
                 ],
@@ -595,43 +603,38 @@ class _LoginPageState extends State<LoginPage> {
                   Text(
                     _error!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFFEF4444),
-                      fontSize: 12,
-                    ),
+                    style: const TextStyle(color: _danger, fontSize: 13),
                   ),
                 ],
-                const SizedBox(height: 22),
+                const SizedBox(height: 24),
                 Row(
                   children: [
-                    const Expanded(child: Divider(color: _line)),
+                    const Expanded(child: Divider(color: Color(0xFF49454F))),
                     Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 10),
+                      padding: const EdgeInsets.symmetric(horizontal: 12),
                       child: Text(
                         l.t('या', 'or'),
-                        style: const TextStyle(fontSize: 11, color: _muted),
+                        style: const TextStyle(color: _muted, fontSize: 12),
                       ),
                     ),
-                    const Expanded(child: Divider(color: _line)),
+                    const Expanded(child: Divider(color: Color(0xFF49454F))),
                   ],
                 ),
-                const SizedBox(height: 18),
+                const SizedBox(height: 20),
                 SizedBox(
                   width: double.infinity,
                   child: OutlinedButton(
                     onPressed: _busy ? null : () => _google(l),
                     style: OutlinedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: const Color(0xFF1F2937),
+                      foregroundColor: _text,
+                      side: const BorderSide(color: Color(0xFF938F99)),
                       padding: const EdgeInsets.symmetric(vertical: 14),
-                      side: BorderSide.none,
                       shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(14),
+                        borderRadius: BorderRadius.circular(24),
                       ),
                     ),
                     child: Text(
                       l.t('Google से जारी रखें', 'Continue with Google'),
-                      style: const TextStyle(fontWeight: FontWeight.w500),
                     ),
                   ),
                 ),
