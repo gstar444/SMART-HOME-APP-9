@@ -33,7 +33,7 @@ class AuthGate extends StatelessWidget {
           );
         }
         if (snap.data == null) return const LoginPage();
-        return _Loaded(settings: settings, store: store, home: home);
+        return DashboardPage(settings: settings, esp: home);
       },
     );
   }

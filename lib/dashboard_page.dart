@@ -4,7 +4,12 @@ import 'dart:math' as math;
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:provider/provider.dart';
+
 import 'boards_page.dart';
+import 'setup_page.dart';
+import 'secure_storage.dart';
 import 'background_page.dart';
 import 'cloud_settings_page.dart';
 import 'dashboard_widgets.dart';
@@ -715,17 +720,65 @@ class _DashboardPageState extends State<DashboardPage> {
   }
 
   // ------------------------------------------------------------- sections
+  void _openAccount() {
+    final user = FirebaseAuth.instance.currentUser;
+    showModalBottomSheet<void>(
+      context: context,
+      showDragHandle: true,
+      builder: (ctx) => SafeArea(
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            ListTile(
+              leading: const CircleAvatar(child: Icon(Icons.person)),
+              title: Text(user?.displayName ?? 'लॉगिन उपयोगकर्ता'),
+              subtitle: Text(user?.email ?? user?.phoneNumber ?? ''),
+            ),
+            const Divider(),
+            ListTile(
+              leading: const Icon(Icons.cloud_outlined),
+              title: const Text('MQTT सेटिंग'),
+              subtitle: const Text('एक बार भरें, अपने आप सेव रहेगी'),
+              onTap: () {
+                Navigator.pop(ctx);
+                Navigator.of(context).push(
+                  MaterialPageRoute<void>(
+                    builder: (_) => SetupPage(
+                      store: context.read<SecureStore>(),
+                      settings: _sc,
+                    ),
+                  ),
+                );
+              },
+            ),
+            ListTile(
+              leading: const Icon(Icons.logout),
+              title: const Text('लॉग आउट'),
+              onTap: () async {
+                Navigator.pop(ctx);
+                await FirebaseAuth.instance.signOut();
+              },
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
   Widget _topBar(Tr tr) {
     final s = _s;
     return Row(
       children: [
-        ClipRRect(
-          borderRadius: BorderRadius.circular(8),
-          child: Image.asset(
-            'assets/images/app_logo.png',
-            width: 30,
-            height: 30,
-            cacheWidth: 90,
+        GestureDetector(
+          onTap: _openAccount,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.asset(
+              'assets/images/app_logo.png',
+              width: 30,
+              height: 30,
+              cacheWidth: 90,
+            ),
           ),
         ),
         const SizedBox(width: 10),
