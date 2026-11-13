@@ -6,7 +6,7 @@ import 'package:firebase_core/firebase_core.dart';
 import 'package:provider/provider.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
-import 'dashboard_page.dart';
+import 'auth_gate.dart';
 import 'esp32_api.dart';
 import 'home_controller.dart';
 import 'mqtt_service.dart';
@@ -103,7 +103,7 @@ class SmartHomeApp extends StatelessWidget {
             darkTheme: buildTheme(accent, Brightness.dark),
             // The dashboard lives *below* MaterialApp, so dialogs, snack bars and
             // navigation get a valid Navigator / ScaffoldMessenger context.
-            home: DashboardPage(settings: controller, esp: home),
+            home: AuthGate(settings: controller, store: store, home: home),
           );
         },
       ),
