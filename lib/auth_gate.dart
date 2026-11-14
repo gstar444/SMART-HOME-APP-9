@@ -1,15 +1,16 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
-import 'cloud_store.dart';
 import 'dashboard_page.dart';
 import 'home_controller.dart';
 import 'login_page.dart';
 import 'secure_storage.dart';
 import 'settings.dart';
-import 'setup_page.dart';
+import 'username_page.dart';
 
-/// लॉगिन जाँचता है। लॉगिन न हो तो LoginPage, लॉगिन हो तो सेव की हुई सेटिंग से होम।
+/// लॉगिन जाँचता है। लॉगिन नहीं तो LoginPage।
+/// लॉगिन है और इसी अकाउंट का यूज़रनेम नहीं तो UsernamePage, वरना होम।
 class AuthGate extends StatelessWidget {
   const AuthGate({
     super.key,
@@ -32,44 +33,63 @@ class AuthGate extends StatelessWidget {
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        if (snap.data == null) return const LoginPage();
-        return DashboardPage(settings: settings, esp: home);
+        final user = snap.data;
+        if (user == null) return const LoginPage();
+        return _Gate(user: user, settings: settings, home: home);
       },
     );
   }
 }
 
-class _Loaded extends StatefulWidget {
-  const _Loaded({
-    required this.settings,
-    required this.store,
-    required this.home,
-  });
+class _Gate extends StatefulWidget {
+  const _Gate({required this.user, required this.settings, required this.home});
 
+  final User user;
   final SettingsController settings;
-  final SecureStore store;
   final HomeController home;
 
   @override
-  State<_Loaded> createState() => _LoadedState();
+  State<_Gate> createState() => _GateState();
 }
 
-class _LoadedState extends State<_Loaded> {
-  late final Future<CloudSetup?> _future = CloudStore.loadSetup();
+class _GateState extends State<_Gate> {
+  late Future<String?> _usernameFuture;
+
+  @override
+  void initState() {
+    super.initState();
+    _usernameFuture = _load();
+  }
+
+  /// इसी uid के अकाउंट का यूज़रनेम (दूसरे का नहीं)।
+  Future<String?> _load() async {
+    final snap = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(widget.user.uid)
+        .get();
+    final name = snap.data()?['username'] as String?;
+    return (name == null || name.isEmpty) ? null : name;
+  }
+
+  void _reload() => setState(() => _usernameFuture = _load());
 
   @override
   Widget build(BuildContext context) {
-    return FutureBuilder<CloudSetup?>(
-      future: _future,
+    return FutureBuilder<String?>(
+      future: _usernameFuture,
       builder: (context, snap) {
         if (snap.connectionState == ConnectionState.waiting) {
           return const Scaffold(
             body: Center(child: CircularProgressIndicator()),
           );
         }
-        final setup = snap.data;
-        if (setup == null) {
-          return SetupPage(store: widget.store, settings: widget.settings);
+        if (snap.hasError) {
+          return const Scaffold(
+            body: Center(child: Text('डेटा नहीं मिला, ऐप फिर से खोलें')),
+          );
+        }
+        if (snap.data == null) {
+          return UsernamePage(user: widget.user, onDone: _reload);
         }
         return DashboardPage(settings: widget.settings, esp: widget.home);
       },

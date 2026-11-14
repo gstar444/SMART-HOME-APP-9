@@ -4,6 +4,8 @@ import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
+import 'forgot_page.dart';
+
 const Color _bg = Color(0xFF121212);
 const Color _fieldBg = Color(0xFF232129);
 const Color _accent = Color(0xFFD0BCFF);
@@ -104,6 +106,9 @@ class _LoginPageState extends State<LoginPage> {
         case 'network-request-failed':
           return l.t('इंटरनेट जाँचें', 'Check your internet connection');
       }
+      if (e.code == 'account-not-found') {
+        return 'इस ईमेल से अकाउंट नहीं मिला';
+      }
       return 'Error: ${e.code}';
     }
     return 'Error: $e';
@@ -169,31 +174,6 @@ class _LoginPageState extends State<LoginPage> {
     });
   }
 
-  Future<void> _forgot(_L l) async {
-    if (_loginId.text.trim().isEmpty) {
-      _set(
-        () => _error = l.t(
-          'पहले यूज़रनेम या ईमेल डालें',
-          'Enter username or email first',
-        ),
-      );
-      return;
-    }
-    await _run(l, () async {
-      final email = await _emailFor(_loginId.text);
-      if (email == null) {
-        throw FirebaseAuthException(code: 'user-not-found');
-      }
-      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
-      _set(
-        () => _info = l.t(
-          'रीसेट लिंक ईमेल पर भेजा गया। नया पासवर्ड बनाकर यहाँ लौटें।',
-          'Reset link sent to your email. Set a new password and come back.',
-        ),
-      );
-    });
-  }
-
   Future<void> _signup(_L l) async {
     final name = _name.text.trim();
     final email = _email.text.trim();
@@ -237,6 +217,9 @@ class _LoginPageState extends State<LoginPage> {
             .collection('usernames')
             .doc(username)
             .set({'uid': user.uid, 'email': email});
+        await FirebaseFirestore.instance.collection('users').doc(user.uid).set({
+          'username': username,
+        }, SetOptions(merge: true));
         await user.sendEmailVerification();
       }
       await FirebaseAuth.instance.signOut();
@@ -288,9 +271,24 @@ class _LoginPageState extends State<LoginPage> {
     final gs = GoogleSignIn.instance;
     await gs.initialize();
     final account = await gs.authenticate();
-    await FirebaseAuth.instance.signInWithCredential(
+    final cred = await FirebaseAuth.instance.signInWithCredential(
       GoogleAuthProvider.credential(idToken: account.authentication.idToken),
     );
+    final user = cred.user;
+    final email = user?.email;
+    bool registered = false;
+    if (email != null) {
+      final byEmail = await FirebaseFirestore.instance
+          .collection('usernames')
+          .where('email', isEqualTo: email)
+          .limit(1)
+          .get();
+      registered = byEmail.docs.isNotEmpty;
+    }
+    if (!registered) {
+      await FirebaseAuth.instance.signOut();
+      throw FirebaseAuthException(code: 'account-not-found');
+    }
   });
 
   Widget _tabs(List<String> labels, int selected, void Function(int) onPick) {
@@ -417,7 +415,11 @@ class _LoginPageState extends State<LoginPage> {
     Align(
       alignment: Alignment.centerRight,
       child: TextButton(
-        onPressed: _busy ? null : () => _forgot(l),
+        onPressed: _busy
+            ? null
+            : () => Navigator.of(context).push(
+                MaterialPageRoute<void>(builder: (_) => const ForgotPage()),
+              ),
         child: Text(
           l.t('पासवर्ड भूल गए?', 'Forgot password?'),
           style: const TextStyle(color: _accent, fontSize: 13),

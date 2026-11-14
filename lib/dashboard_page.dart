@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import 'boards_page.dart';
 import 'setup_page.dart';
+import 'account_panel.dart';
 import 'login_page.dart';
 import 'secure_storage.dart';
 import 'background_page.dart';
@@ -730,11 +731,18 @@ class _DashboardPageState extends State<DashboardPage> {
         child: Column(
           mainAxisSize: MainAxisSize.min,
           children: [
-            ListTile(
-              leading: const CircleAvatar(child: Icon(Icons.person)),
-              title: Text(user?.displayName ?? 'लॉगिन उपयोगकर्ता'),
-              subtitle: Text(user?.email ?? user?.phoneNumber ?? ''),
-            ),
+            if (user != null) ...[
+              AccountHeader(user: user),
+              ListTile(
+                leading: const Icon(Icons.badge_outlined),
+                title: const Text('यूज़रनेम बदलें'),
+                subtitle: const Text('नया यूज़रनेम चुनें, पुराना तुरंत बंद'),
+                onTap: () {
+                  Navigator.pop(ctx);
+                  startUsernameChange(context, user);
+                },
+              ),
+            ],
             const Divider(),
             ListTile(
               leading: const Icon(Icons.cloud_outlined),
