@@ -9,6 +9,7 @@ import 'package:provider/provider.dart';
 
 import 'boards_page.dart';
 import 'setup_page.dart';
+import 'login_page.dart';
 import 'secure_storage.dart';
 import 'background_page.dart';
 import 'cloud_settings_page.dart';
@@ -756,7 +757,12 @@ class _DashboardPageState extends State<DashboardPage> {
               title: const Text('लॉग आउट'),
               onTap: () async {
                 Navigator.pop(ctx);
+                final nav = Navigator.of(context, rootNavigator: true);
                 await FirebaseAuth.instance.signOut();
+                nav.pushAndRemoveUntil(
+                  MaterialPageRoute<void>(builder: (_) => const LoginPage()),
+                  (_) => false,
+                );
               },
             ),
           ],
