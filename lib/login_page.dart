@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
@@ -10,6 +11,7 @@ const Color _onAccent = Color(0xFF381E72);
 const Color _muted = Color(0xFFCAC4D0);
 const Color _text = Color(0xFFE6E1E5);
 const Color _danger = Color(0xFFF2B8B5);
+const Color _ok = Color(0xFF9FD8A6);
 
 /// भाषा (true = हिंदी)। फ़ोन में सेव रहती है।
 final ValueNotifier<bool> loginHindi = ValueNotifier<bool>(true);
@@ -31,6 +33,8 @@ class _L {
   String t(String hi, String en) => h ? hi : en;
 }
 
+final RegExp _usernameRe = RegExp(r'^[a-z0-9_]{3,20}$');
+
 class LoginPage extends StatefulWidget {
   const LoginPage({super.key});
 
@@ -41,16 +45,14 @@ class LoginPage extends StatefulWidget {
 class _LoginPageState extends State<LoginPage> {
   final _name = TextEditingController();
   final _email = TextEditingController();
+  final _username = TextEditingController();
   final _password = TextEditingController();
-  final _phone = TextEditingController();
-  final _otp = TextEditingController();
+  final _loginId = TextEditingController();
 
   int _tab = 0; // 0 = लॉगिन, 1 = अकाउंट बनाएँ
-  int _method = 0; // लॉगिन में: 0 = ईमेल, 1 = फ़ोन
-  int _signupStep = 0; // अकाउंट में: 0 = जानकारी, 1 = OTP
-  String? _verificationId;
   bool _busy = false;
   bool _obscure = true;
+  bool _awaitingVerify = false;
   String? _error;
   String? _info;
 
@@ -62,7 +64,7 @@ class _LoginPageState extends State<LoginPage> {
 
   @override
   void dispose() {
-    for (final c in [_name, _email, _password, _phone, _otp]) {
+    for (final c in [_name, _email, _username, _password, _loginId]) {
       c.dispose();
     }
     super.dispose();
@@ -78,7 +80,10 @@ class _LoginPageState extends State<LoginPage> {
         case 'invalid-credential':
         case 'wrong-password':
         case 'user-not-found':
-          return l.t('ईमेल या पासवर्ड गलत है', 'Wrong email or password');
+          return l.t(
+            'ईमेल/यूज़रनेम या पासवर्ड गलत है',
+            'Wrong email/username or password',
+          );
         case 'email-already-in-use':
           return l.t(
             'यह ईमेल पहले से बना है',
@@ -91,15 +96,6 @@ class _LoginPageState extends State<LoginPage> {
             'पासवर्ड कम से कम 6 अक्षर का हो',
             'Password must be at least 6 characters',
           );
-        case 'invalid-phone-number':
-          return l.t('फ़ोन नंबर सही नहीं है', 'Invalid phone number');
-        case 'invalid-verification-code':
-          return l.t('OTP गलत है', 'Wrong OTP');
-        case 'credential-already-in-use':
-          return l.t(
-            'यह फ़ोन नंबर पहले से किसी अकाउंट से जुड़ा है',
-            'This phone is already linked to an account',
-          );
         case 'too-many-requests':
           return l.t(
             'बहुत कोशिशें हो गईं, थोड़ी देर बाद कोशिश करें',
@@ -108,8 +104,8 @@ class _LoginPageState extends State<LoginPage> {
         case 'network-request-failed':
           return l.t('इंटरनेट जाँचें', 'Check your internet connection');
       }
+      return 'Error: ${e.code}';
     }
-    if (e is FirebaseAuthException) return 'Error: ${e.code}';
     return 'Error: $e';
   }
 
@@ -128,100 +124,81 @@ class _LoginPageState extends State<LoginPage> {
     }
   }
 
-  bool _validPhone(String v) => RegExp(r'^\+\d{10,15}$').hasMatch(v);
+  /// ईमेल है तो वही, वरना यूज़रनेम से ईमेल ढूँढें।
+  Future<String?> _emailFor(String input) async {
+    final v = input.trim();
+    if (v.contains('@')) return v;
+    final snap = await FirebaseFirestore.instance
+        .collection('usernames')
+        .doc(v.toLowerCase())
+        .get();
+    return snap.data()?['email'] as String?;
+  }
 
-  Future<void> _loginEmail(_L l) async {
-    if (!_email.text.contains('@') || _password.text.isEmpty) {
+  Future<void> _login(_L l) async {
+    if (_loginId.text.trim().isEmpty || _password.text.isEmpty) {
       _set(
-        () => _error = l.t('ईमेल और पासवर्ड डालें', 'Enter email and password'),
+        () => _error = l.t(
+          'यूज़रनेम/ईमेल और पासवर्ड डालें',
+          'Enter username/email and password',
+        ),
       );
       return;
     }
     await _run(l, () async {
-      await FirebaseAuth.instance.signInWithEmailAndPassword(
-        email: _email.text.trim(),
+      final email = await _emailFor(_loginId.text);
+      if (email == null) {
+        throw FirebaseAuthException(code: 'user-not-found');
+      }
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
         password: _password.text,
       );
+      final user = cred.user;
+      if (user != null && !user.emailVerified) {
+        await user.sendEmailVerification();
+        await FirebaseAuth.instance.signOut();
+        _set(() {
+          _awaitingVerify = true;
+          _info = l.t(
+            'ईमेल verify नहीं है। लिंक फिर से भेजा गया है।',
+            'Email not verified. We sent the link again.',
+          );
+        });
+      }
     });
   }
 
   Future<void> _forgot(_L l) async {
-    if (!_email.text.contains('@')) {
-      _set(() => _error = l.t('पहले ईमेल डालें', 'Enter your email first'));
-      return;
-    }
-    await _run(l, () async {
-      await FirebaseAuth.instance.sendPasswordResetEmail(
-        email: _email.text.trim(),
-      );
-      _set(
-        () => _info = l.t(
-          'रीसेट लिंक ईमेल पर भेजा गया',
-          'Reset link sent to your email',
-        ),
-      );
-    });
-  }
-
-  Future<void> _sendOtp(_L l, {required bool signup}) async {
-    final raw = _phone.text.trim().replaceAll(' ', '');
-    final number = raw.startsWith('+') ? raw : '+91$raw';
-    _phone.text = number;
-    if (!_validPhone(number)) {
+    if (_loginId.text.trim().isEmpty) {
       _set(
         () => _error = l.t(
-          'देश कोड के साथ नंबर लिखें, जैसे +919876543210',
-          'Enter number with country code, e.g. +919876543210',
+          'पहले यूज़रनेम या ईमेल डालें',
+          'Enter username or email first',
         ),
       );
       return;
     }
-    _set(() {
-      _busy = true;
-      _error = null;
-      _info = null;
-    });
-    try {
-      await FirebaseAuth.instance.verifyPhoneNumber(
-        phoneNumber: _phone.text.trim(),
-        verificationCompleted: (_) {},
-        verificationFailed: (e) => _set(() {
-          _busy = false;
-          _error = _msg(e, l);
-        }),
-        codeSent: (id, _) => _set(() {
-          _verificationId = id;
-          _busy = false;
-          if (signup) _signupStep = 1;
-          _info = l.t('OTP भेजा गया है', 'OTP sent');
-        }),
-        codeAutoRetrievalTimeout: (_) {},
-      );
-    } catch (e) {
-      _set(() {
-        _busy = false;
-        _error = _msg(e, l);
-      });
-    }
-  }
-
-  Future<void> _verifyPhoneLogin(_L l) async {
-    final id = _verificationId;
-    if (id == null) return;
     await _run(l, () async {
-      await FirebaseAuth.instance.signInWithCredential(
-        PhoneAuthProvider.credential(
-          verificationId: id,
-          smsCode: _otp.text.trim(),
+      final email = await _emailFor(_loginId.text);
+      if (email == null) {
+        throw FirebaseAuthException(code: 'user-not-found');
+      }
+      await FirebaseAuth.instance.sendPasswordResetEmail(email: email);
+      _set(
+        () => _info = l.t(
+          'रीसेट लिंक ईमेल पर भेजा गया। नया पासवर्ड बनाकर यहाँ लौटें।',
+          'Reset link sent to your email. Set a new password and come back.',
         ),
       );
     });
   }
 
-  Future<void> _startSignup(_L l) async {
-    if (_name.text.trim().isEmpty ||
-        !_email.text.contains('@') ||
-        _password.text.length < 6) {
+  Future<void> _signup(_L l) async {
+    final name = _name.text.trim();
+    final email = _email.text.trim();
+    final username = _username.text.trim().toLowerCase();
+    if (name.isEmpty || !email.contains('@') || _password.text.length < 6) {
       _set(
         () => _error = l.t(
           'नाम, ईमेल और 6+ अक्षर का पासवर्ड डालें',
@@ -230,29 +207,80 @@ class _LoginPageState extends State<LoginPage> {
       );
       return;
     }
-    await _sendOtp(l, signup: true);
+    if (!_usernameRe.hasMatch(username)) {
+      _set(
+        () => _error = l.t(
+          'यूज़रनेम में 3-20 अक्षर: a-z, 0-9, _',
+          'Username: 3-20 chars, a-z, 0-9, _ only',
+        ),
+      );
+      return;
+    }
+    await _run(l, () async {
+      final taken =
+          (await FirebaseFirestore.instance
+                  .collection('usernames')
+                  .doc(username)
+                  .get())
+              .exists;
+      if (taken) {
+        throw StateError('username-taken');
+      }
+      final cred = await FirebaseAuth.instance.createUserWithEmailAndPassword(
+        email: email,
+        password: _password.text,
+      );
+      final user = cred.user;
+      if (user != null) {
+        await user.updateDisplayName(name);
+        await FirebaseFirestore.instance
+            .collection('usernames')
+            .doc(username)
+            .set({'uid': user.uid, 'email': email});
+        await user.sendEmailVerification();
+      }
+      await FirebaseAuth.instance.signOut();
+      _set(() {
+        _awaitingVerify = true;
+        _info = l.t(
+          'ईमेल पर verification लिंक भेजा गया है। लिंक पर क्लिक करें, फिर "मैंने verify कर लिया" दबाएँ।',
+          'A verification link was sent to your email. Click it, then press "I have verified".',
+        );
+      });
+    }).catchError((e) {
+      if (e is StateError && e.message == 'username-taken') {
+        _set(
+          () => _error = l.t(
+            'यह यूज़रनेम पहले से लिया हुआ है',
+            'This username is already taken',
+          ),
+        );
+      }
+    });
   }
 
-  Future<void> _finishSignup(_L l) async {
-    final id = _verificationId;
-    if (id == null) return;
+  Future<void> _checkVerified(_L l) async {
     await _run(l, () async {
-      final auth = FirebaseAuth.instance;
-      final phoneLogin = await auth.signInWithCredential(
-        PhoneAuthProvider.credential(
-          verificationId: id,
-          smsCode: _otp.text.trim(),
-        ),
+      final email = _email.text.trim();
+      final cred = await FirebaseAuth.instance.signInWithEmailAndPassword(
+        email: email,
+        password: _password.text,
       );
-      final user = phoneLogin.user;
-      if (user == null) return;
-      await user.linkWithCredential(
-        EmailAuthProvider.credential(
-          email: _email.text.trim(),
-          password: _password.text,
-        ),
-      );
-      await user.updateDisplayName(_name.text.trim());
+      await cred.user?.reload();
+      if (cred.user?.emailVerified ?? false) {
+        _set(() {
+          _awaitingVerify = false;
+          _info = null;
+        });
+      } else {
+        await FirebaseAuth.instance.signOut();
+        _set(
+          () => _error = l.t(
+            'अभी verify नहीं हुआ। लिंक पर क्लिक करें।',
+            'Not verified yet. Please click the link.',
+          ),
+        );
+      }
     });
   }
 
@@ -311,7 +339,6 @@ class _LoginPageState extends State<LoginPage> {
     TextInputType? type,
     bool password = false,
     String? hint,
-    String? prefix,
   }) {
     OutlineInputBorder border(Color c, double w) => OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
@@ -332,8 +359,6 @@ class _LoginPageState extends State<LoginPage> {
           floatingLabelStyle: const TextStyle(color: _accent),
           hintStyle: const TextStyle(color: Color(0xFF6F6A78)),
           prefixIcon: Icon(icon, color: _muted),
-          prefixText: prefix,
-          prefixStyle: const TextStyle(color: _text, fontSize: 15),
           suffixIcon: password
               ? IconButton(
                   icon: Icon(
@@ -376,126 +401,78 @@ class _LoginPageState extends State<LoginPage> {
     ),
   );
 
-  List<Widget> _loginFields(_L l) {
-    if (_method == 0) {
-      return [
-        _field(
-          label: l.t('ईमेल', 'Email'),
-          controller: _email,
-          icon: Icons.mail_outline,
-          type: TextInputType.emailAddress,
-          hint: 'you@gmail.com',
+  List<Widget> _loginFields(_L l) => [
+    _field(
+      label: l.t('यूज़रनेम या ईमेल', 'Username or email'),
+      controller: _loginId,
+      icon: Icons.person_outline,
+      type: TextInputType.emailAddress,
+    ),
+    _field(
+      label: l.t('पासवर्ड', 'Password'),
+      controller: _password,
+      icon: Icons.lock_outline,
+      password: true,
+    ),
+    Align(
+      alignment: Alignment.centerRight,
+      child: TextButton(
+        onPressed: _busy ? null : () => _forgot(l),
+        child: Text(
+          l.t('पासवर्ड भूल गए?', 'Forgot password?'),
+          style: const TextStyle(color: _accent, fontSize: 13),
         ),
-        _field(
-          label: l.t('पासवर्ड', 'Password'),
-          controller: _password,
-          icon: Icons.lock_outline,
-          password: true,
-        ),
-        Align(
-          alignment: Alignment.centerRight,
-          child: TextButton(
-            onPressed: _busy ? null : () => _forgot(l),
-            child: Text(
-              l.t('पासवर्ड भूल गए?', 'Forgot password?'),
-              style: const TextStyle(color: _accent, fontSize: 13),
-            ),
-          ),
-        ),
-        const SizedBox(height: 6),
-        _primary(l.t('लॉगिन करें', 'Sign in'), () => _loginEmail(l)),
-      ];
-    }
-    return [
-      _field(
-        label: l.t('फ़ोन नंबर (10 अंक)', 'Phone number (10 digits)'),
-        controller: _phone,
-        icon: Icons.phone_outlined,
-        type: TextInputType.phone,
-        hint: '9876543210',
-        prefix: '+91 ',
       ),
-      if (_verificationId != null)
-        _field(
-          label: 'OTP',
-          controller: _otp,
-          icon: Icons.sms_outlined,
-          type: TextInputType.number,
-        ),
-      const SizedBox(height: 6),
-      if (_verificationId == null)
-        _primary(l.t('OTP भेजें', 'Send OTP'), () => _sendOtp(l, signup: false))
-      else
-        _primary(
-          l.t('OTP से लॉगिन करें', 'Sign in with OTP'),
-          () => _verifyPhoneLogin(l),
-        ),
-    ];
-  }
+    ),
+    const SizedBox(height: 6),
+    _primary(l.t('लॉगिन करें', 'Sign in'), () => _login(l)),
+  ];
 
   List<Widget> _signupFields(_L l) {
-    if (_signupStep == 0) {
+    if (_awaitingVerify) {
       return [
-        _field(
-          label: l.t('पूरा नाम', 'Full name'),
-          controller: _name,
-          icon: Icons.person_outline,
+        Text(
+          l.t(
+            'ईमेल पर लिंक भेजा गया है। लिंक पर क्लिक करके यहाँ लौटें।',
+            'We sent a link to your email. Click it, then come back here.',
+          ),
+          textAlign: TextAlign.center,
+          style: const TextStyle(color: _muted, fontSize: 13),
         ),
-        _field(
-          label: l.t('ईमेल', 'Email'),
-          controller: _email,
-          icon: Icons.mail_outline,
-          type: TextInputType.emailAddress,
-          hint: 'you@gmail.com',
+        const SizedBox(height: 14),
+        _primary(
+          l.t('मैंने verify कर लिया', 'I have verified'),
+          () => _checkVerified(l),
         ),
-        _field(
-          label: l.t('फ़ोन नंबर', 'Phone number'),
-          controller: _phone,
-          icon: Icons.phone_outlined,
-          type: TextInputType.phone,
-          hint: '+919876543210',
-        ),
-        _field(
-          label: l.t('पासवर्ड बनाएँ', 'Create password'),
-          controller: _password,
-          icon: Icons.lock_outline,
-          password: true,
-        ),
-        const SizedBox(height: 6),
-        _primary(l.t('OTP भेजें', 'Send OTP'), () => _startSignup(l)),
       ];
     }
     return [
-      Text(
-        l.t(
-          'फ़ोन पर आया 6 अंकों का OTP डालें',
-          'Enter the 6-digit OTP sent to your phone',
-        ),
-        style: const TextStyle(color: _muted, fontSize: 13),
-      ),
-      const SizedBox(height: 12),
       _field(
-        label: 'OTP',
-        controller: _otp,
-        icon: Icons.sms_outlined,
-        type: TextInputType.number,
+        label: l.t('पूरा नाम', 'Full name'),
+        controller: _name,
+        icon: Icons.badge_outlined,
       ),
-      _primary(
-        l.t('सत्यापित करें और बनाएँ', 'Verify and create account'),
-        () => _finishSignup(l),
+      _field(
+        label: l.t('ईमेल', 'Email'),
+        controller: _email,
+        icon: Icons.mail_outline,
+        type: TextInputType.emailAddress,
+        hint: 'you@gmail.com',
       ),
-      TextButton(
-        onPressed: _busy
-            ? null
-            : () => _set(() {
-                _signupStep = 0;
-                _otp.clear();
-              }),
-        child: Text(
-          l.t('जानकारी बदलें', 'Edit details'),
-          style: const TextStyle(color: _accent),
-        ),
+      _field(
+        label: l.t('यूज़रनेम', 'Username'),
+        controller: _username,
+        icon: Icons.alternate_email,
+        hint: 'ashish_home',
       ),
+      _field(
+        label: l.t('पासवर्ड बनाएँ', 'Create password'),
+        controller: _password,
+        icon: Icons.lock_outline,
+        password: true,
+      ),
+      const SizedBox(height: 6),
+      _primary(l.t('अकाउंट बनाएँ', 'Create account'), () => _signup(l)),
     ];
   }
 
@@ -567,25 +544,11 @@ class _LoginPageState extends State<LoginPage> {
                     _tab = i;
                     _error = null;
                     _info = null;
-                    _signupStep = 0;
-                    _verificationId = null;
+                    _awaitingVerify = false;
                   }),
                 ),
                 const SizedBox(height: 18),
-                if (_tab == 0) ...[
-                  _tabs(
-                    [l.t('ईमेल', 'Email'), l.t('फ़ोन', 'Phone')],
-                    _method,
-                    (i) => _set(() {
-                      _method = i;
-                      _error = null;
-                      _verificationId = null;
-                    }),
-                  ),
-                  const SizedBox(height: 18),
-                  ..._loginFields(l),
-                ] else
-                  ..._signupFields(l),
+                ...(_tab == 0 ? _loginFields(l) : _signupFields(l)),
                 if (_busy) ...[
                   const SizedBox(height: 14),
                   const Center(
@@ -597,10 +560,7 @@ class _LoginPageState extends State<LoginPage> {
                   Text(
                     _info!,
                     textAlign: TextAlign.center,
-                    style: const TextStyle(
-                      color: Color(0xFF9FD8A6),
-                      fontSize: 13,
-                    ),
+                    style: const TextStyle(color: _ok, fontSize: 13),
                   ),
                 ],
                 if (_error != null) ...[
