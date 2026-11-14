@@ -164,7 +164,10 @@ class _LoginPageState extends State<LoginPage> {
   }
 
   Future<void> _sendOtp(_L l, {required bool signup}) async {
-    if (!_validPhone(_phone.text.trim())) {
+    final raw = _phone.text.trim().replaceAll(' ', '');
+    final number = raw.startsWith('+') ? raw : '+91$raw';
+    _phone.text = number;
+    if (!_validPhone(number)) {
       _set(
         () => _error = l.t(
           'देश कोड के साथ नंबर लिखें, जैसे +919876543210',
@@ -308,6 +311,7 @@ class _LoginPageState extends State<LoginPage> {
     TextInputType? type,
     bool password = false,
     String? hint,
+    String? prefix,
   }) {
     OutlineInputBorder border(Color c, double w) => OutlineInputBorder(
       borderRadius: BorderRadius.circular(16),
@@ -328,6 +332,8 @@ class _LoginPageState extends State<LoginPage> {
           floatingLabelStyle: const TextStyle(color: _accent),
           hintStyle: const TextStyle(color: Color(0xFF6F6A78)),
           prefixIcon: Icon(icon, color: _muted),
+          prefixText: prefix,
+          prefixStyle: const TextStyle(color: _text, fontSize: 15),
           suffixIcon: password
               ? IconButton(
                   icon: Icon(
@@ -402,11 +408,12 @@ class _LoginPageState extends State<LoginPage> {
     }
     return [
       _field(
-        label: l.t('फ़ोन नंबर', 'Phone number'),
+        label: l.t('फ़ोन नंबर (10 अंक)', 'Phone number (10 digits)'),
         controller: _phone,
         icon: Icons.phone_outlined,
         type: TextInputType.phone,
-        hint: '+919876543210',
+        hint: '9876543210',
+        prefix: '+91 ',
       ),
       if (_verificationId != null)
         _field(
