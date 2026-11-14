@@ -35,18 +35,24 @@ class AuthGate extends StatelessWidget {
         }
         final user = snap.data;
         if (user == null) return const LoginPage();
-        return _Gate(user: user, settings: settings, home: home);
+        return _Gate(user: user, settings: settings, home: home, store: store);
       },
     );
   }
 }
 
 class _Gate extends StatefulWidget {
-  const _Gate({required this.user, required this.settings, required this.home});
+  const _Gate({
+    required this.user,
+    required this.settings,
+    required this.home,
+    required this.store,
+  });
 
   final User user;
   final SettingsController settings;
   final HomeController home;
+  final SecureStore store;
 
   @override
   State<_Gate> createState() => _GateState();
@@ -61,13 +67,25 @@ class _GateState extends State<_Gate> {
     _usernameFuture = _load();
   }
 
-  /// इसी uid के अकाउंट का यूज़रनेम (दूसरे का नहीं)।
+  /// इसी uid के अकाउंट का यूज़रनेम, और MQTT जानकारी फ़ोन में लोड।
   Future<String?> _load() async {
     final snap = await FirebaseFirestore.instance
         .collection('users')
         .doc(widget.user.uid)
         .get();
-    final name = snap.data()?['username'] as String?;
+    final data = snap.data();
+    final name = data?['username'] as String?;
+    if (data != null && data['host'] != null) {
+      await widget.store.saveCloud(
+        CloudConfig(
+          host: (data['host'] as String?) ?? '',
+          port: (data['port'] as num?)?.toInt() ?? 8883,
+          homeId: (data['homeId'] as String?) ?? 'home',
+          username: (data['username'] as String?) ?? '',
+          password: (data['password'] as String?) ?? '',
+        ),
+      );
+    }
     return (name == null || name.isEmpty) ? null : name;
   }
 
