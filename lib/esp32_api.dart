@@ -588,10 +588,14 @@ class Esp32Controller extends ChangeNotifier
       _pending.remove(busyKey);
       _lastWrite = DateTime.now();
       if (!_disposed) notifyListeners();
-      // Re-read the real state shortly after, so the UI always converges.
-      unawaited(
-        Future<void>.delayed(const Duration(milliseconds: 100), refresh),
-      );
+      // सारे कमांड खत्म होने के बाद एक बार असली state पढ़ें (बीच में पुराना state न आए)।
+      if (_pending.isEmpty) {
+        unawaited(
+          Future<void>.delayed(const Duration(milliseconds: 500), () {
+            if (_pending.isEmpty) return refresh();
+          }),
+        );
+      }
     }
   }
 
