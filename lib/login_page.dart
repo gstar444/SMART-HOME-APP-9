@@ -109,10 +109,8 @@ class _LoginPageState extends State<LoginPage> {
           return l.t('इंटरनेट जाँचें', 'Check your internet connection');
       }
     }
-    return l.t(
-      'कुछ गड़बड़ हुई, फिर कोशिश करें',
-      'Something went wrong, please try again',
-    );
+    if (e is FirebaseAuthException) return 'Error: ${e.code}';
+    return 'Error: $e';
   }
 
   Future<void> _run(_L l, Future<void> Function() action) async {
